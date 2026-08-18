@@ -1300,7 +1300,7 @@ const INITIAL_STATE: TelemetryState = {
   cameraFocus: false,
   hudVisible: true,
   bloomIntensity: 1.5,
-  zoomLevel: 1.0,
+  zoomLevel: 0.65,
 
   searchQuery: '',
   selectedCategory: null,

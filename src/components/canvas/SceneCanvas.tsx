@@ -807,7 +807,7 @@ function KnowledgeGraphEdges() {
   );
 }
 
-// Camera Rig: Comfortable cinematic fly-to zoom (nz + 8.5 / zoomLevel)
+// Camera Rig: Smooth cinematic lerp for node zoom-in and homepage full-graph overview
 function CameraRig({ controlsRef }: { controlsRef: React.RefObject<OrbitControlsImpl> }) {
   const { camera } = useThree();
   const topicNodes = useStore((state) => state.topicNodes);
@@ -820,9 +820,7 @@ function CameraRig({ controlsRef }: { controlsRef: React.RefObject<OrbitControls
   useEffect(() => {
     if (selectedTopicId !== prevSelectedId.current) {
       prevSelectedId.current = selectedTopicId;
-      if (selectedTopicId) {
-        isAnimating.current = true;
-      }
+      isAnimating.current = true;
     }
   }, [selectedTopicId]);
 
@@ -830,19 +828,34 @@ function CameraRig({ controlsRef }: { controlsRef: React.RefObject<OrbitControls
     const controls = controlsRef.current;
     if (!controls) return;
 
-    const selectedNode = topicNodes.find((n) => n.id === selectedTopicId);
+    if (isAnimating.current) {
+      const selectedNode = topicNodes.find((n) => n.id === selectedTopicId);
 
-    if (selectedNode && isAnimating.current) {
-      const [nx, ny, nz] = selectedNode.coordinates;
-      const targetPos = new THREE.Vector3(nx, ny, nz);
-      const camTargetPos = new THREE.Vector3(nx, ny + 0.4, nz + 8.5 / zoomLevel);
+      if (selectedNode) {
+        // Zoom into selected node
+        const [nx, ny, nz] = selectedNode.coordinates;
+        const targetPos = new THREE.Vector3(nx, ny, nz);
+        const camTargetPos = new THREE.Vector3(nx, ny + 0.4, nz + 8.5 / Math.max(0.5, zoomLevel));
 
-      controls.target.lerp(targetPos, delta * 7.0);
-      camera.position.lerp(camTargetPos, delta * 7.0);
-      controls.update();
+        controls.target.lerp(targetPos, delta * 7.0);
+        camera.position.lerp(camTargetPos, delta * 7.0);
+        controls.update();
 
-      if (controls.target.distanceTo(targetPos) < 0.05 && camera.position.distanceTo(camTargetPos) < 0.1) {
-        isAnimating.current = false;
+        if (controls.target.distanceTo(targetPos) < 0.05 && camera.position.distanceTo(camTargetPos) < 0.1) {
+          isAnimating.current = false;
+        }
+      } else {
+        // Zoom out to homepage full graph overview
+        const targetPos = new THREE.Vector3(0, 0, 0);
+        const camTargetPos = new THREE.Vector3(0, 0, 36.0 / Math.max(0.4, zoomLevel));
+
+        controls.target.lerp(targetPos, delta * 5.0);
+        camera.position.lerp(camTargetPos, delta * 5.0);
+        controls.update();
+
+        if (controls.target.distanceTo(targetPos) < 0.05 && camera.position.distanceTo(camTargetPos) < 0.1) {
+          isAnimating.current = false;
+        }
       }
     }
   });
@@ -888,7 +901,7 @@ export default function SceneCanvas() {
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
         onPointerMissed={() => setSelectedTopicId(null)}
       >
-        <PerspectiveCamera makeDefault position={[0, 0, 22.0]} fov={60} />
+        <PerspectiveCamera makeDefault position={[0, 0, 36.0]} fov={60} />
         <OrbitControls
           makeDefault
           ref={controlsRef}

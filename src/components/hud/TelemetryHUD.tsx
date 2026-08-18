@@ -59,7 +59,7 @@ export default function TelemetryHUD() {
   const store = useStore();
 
   const [activeTab, setActiveTab] = useState<'TOPICS' | 'TODOS'>('TOPICS');
-  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
+  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [newTodoTitle, setNewTodoTitle] = useState('');
   const [newTodoCategory, setNewTodoCategory] = useState('AI & ML');
