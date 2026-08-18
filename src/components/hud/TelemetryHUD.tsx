@@ -95,98 +95,98 @@ export default function TelemetryHUD() {
 
   return (
     <div className="pointer-events-none fixed inset-0 z-20 flex flex-col justify-between p-4 md:p-6 overflow-hidden">
-      {/* ================= TOP BAR ================= */}
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        {/* Branding & App Title & Collapsible Quick Search */}
-        <div className="pointer-events-auto glass-panel px-4 py-2.5 rounded-lg flex items-center gap-4 relative">
-          <div className="absolute -top-0.5 -left-0.5 w-2 h-2 border-t-2 border-l-2 border-[#00f0ff]" />
-          <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 border-b-2 border-r-2 border-[#00f0ff]" />
+      {/* ================= UNIFIED TOP BAR (BRANDING, CLUSTERS & SEARCH) ================= */}
+      <header className="pointer-events-auto glass-panel px-4 py-2.5 rounded-lg flex items-center justify-between gap-4 relative">
+        <div className="absolute -top-0.5 -left-0.5 w-2 h-2 border-t-2 border-l-2 border-[#00f0ff]" />
+        <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 border-b-2 border-r-2 border-[#00f0ff]" />
 
-          <div className="flex items-center gap-2.5">
-            <Sparkles size={18} className="text-[#00f0ff] animate-pulse" />
-            <h1 className="font-display font-extrabold text-sm md:text-base tracking-wider text-slate-100 uppercase">
-              COSMOS
-            </h1>
-          </div>
+        {/* 1. Branding & Title */}
+        <div className="flex items-center gap-2.5 flex-shrink-0">
+          <Sparkles size={18} className="text-[#00f0ff] animate-pulse" />
+          <h1 className="font-display font-extrabold text-sm md:text-base tracking-wider text-slate-100 uppercase">
+            COSMOS
+          </h1>
+        </div>
 
-          <div className="h-4 w-px bg-white/10 hidden sm:block" />
+        <div className="h-4 w-px bg-white/10 hidden sm:block flex-shrink-0" />
 
-          {/* Quick Search Bar (Minimized into search icon by default) */}
-          <div className="flex items-center bg-slate-950/80 border border-white/10 rounded-lg p-1 font-mono text-xs">
-            <AnimatePresence initial={false} mode="wait">
-              {isSearchOpen ? (
-                <motion.div
-                  key="search-expanded"
-                  initial={{ width: 0, opacity: 0 }}
-                  animate={{ width: 'auto', opacity: 1 }}
-                  exit={{ width: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="flex items-center gap-2 px-1.5 py-0.5 overflow-hidden"
+        {/* 2. Domain Cluster Navigation Bar */}
+        <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 font-mono text-xs max-w-full no-scrollbar">
+          <span className="text-slate-500 font-bold items-center gap-1 mr-1 hidden lg:flex flex-shrink-0">
+            <Compass size={13} className="text-[#00f0ff]" /> CLUSTERS:
+          </span>
+          {categories.map((cat) => {
+            const isSelected = (cat === 'ALL' && !store.selectedCategory) || store.selectedCategory === cat;
+            return (
+              <button
+                key={cat}
+                onClick={() => store.setSelectedCategory(cat === 'ALL' ? null : cat)}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all border whitespace-nowrap flex-shrink-0 ${
+                  isSelected
+                    ? 'bg-[#00f0ff]/20 text-[#00f0ff] border-[#00f0ff] shadow-[0_0_10px_rgba(0,240,255,0.25)]'
+                    : 'bg-slate-950/60 text-slate-400 border-white/5 hover:text-slate-200 hover:border-white/20'
+                }`}
+              >
+                {cat}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="h-4 w-px bg-white/10 hidden sm:block flex-shrink-0" />
+
+        {/* 3. Collapsible Quick Search Bar */}
+        <div className="flex items-center bg-slate-950/80 border border-white/10 rounded-lg p-1 font-mono text-xs flex-shrink-0">
+          <AnimatePresence initial={false} mode="wait">
+            {isSearchOpen ? (
+              <motion.div
+                key="search-expanded"
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: 'auto', opacity: 1 }}
+                exit={{ width: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="flex items-center gap-2 px-1.5 py-0.5 overflow-hidden"
+              >
+                <Search size={14} className="text-[#00f0ff] flex-shrink-0" />
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="Search 220+ concepts..."
+                  value={store.searchQuery}
+                  onChange={(e) => store.setSearchQuery(e.target.value)}
+                  className="bg-transparent font-mono text-xs text-slate-100 placeholder-slate-500 focus:outline-none w-36 md:w-48"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    store.setSearchQuery('');
+                    setIsSearchOpen(false);
+                  }}
+                  className="text-slate-400 hover:text-slate-100 p-0.5 flex-shrink-0"
+                  title="Close search"
                 >
-                  <Search size={14} className="text-[#00f0ff] flex-shrink-0" />
-                  <input
-                    type="text"
-                    autoFocus
-                    placeholder="Search 220+ concepts..."
-                    value={store.searchQuery}
-                    onChange={(e) => store.setSearchQuery(e.target.value)}
-                    className="bg-transparent font-mono text-xs text-slate-100 placeholder-slate-500 focus:outline-none w-36 md:w-48"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      store.setSearchQuery('');
-                      setIsSearchOpen(false);
-                    }}
-                    className="text-slate-400 hover:text-slate-100 p-0.5 flex-shrink-0"
-                    title="Close search"
-                  >
-                    <X size={13} />
-                  </button>
-                </motion.div>
-              ) : (
-                <motion.button
-                  key="search-icon"
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.8, opacity: 0 }}
-                  onClick={() => setIsSearchOpen(true)}
-                  className="p-1 text-slate-400 hover:text-[#00f0ff] transition-colors rounded flex items-center gap-1.5"
-                  title="Open concept search"
-                >
-                  <Search size={15} />
-                  {store.searchQuery && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#00f0ff]" />
-                  )}
-                </motion.button>
-              )}
-            </AnimatePresence>
-          </div>
+                  <X size={13} />
+                </button>
+              </motion.div>
+            ) : (
+              <motion.button
+                key="search-icon"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                onClick={() => setIsSearchOpen(true)}
+                className="p-1 text-slate-400 hover:text-[#00f0ff] transition-colors rounded flex items-center gap-1.5"
+                title="Open concept search"
+              >
+                <Search size={15} />
+                {store.searchQuery && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00f0ff]" />
+                )}
+              </motion.button>
+            )}
+          </AnimatePresence>
         </div>
       </header>
-
-      {/* ================= DOMAIN CLUSTER QUICK-JUMP NAVIGATION BAR ================= */}
-      <div className="pointer-events-auto flex items-center justify-center gap-1.5 my-2 overflow-x-auto py-1 font-mono text-xs">
-        <span className="text-slate-500 font-bold flex items-center gap-1 mr-1">
-          <Compass size={13} className="text-[#00f0ff]" /> CLUSTERS:
-        </span>
-        {categories.map((cat) => {
-          const isSelected = (cat === 'ALL' && !store.selectedCategory) || store.selectedCategory === cat;
-          return (
-            <button
-              key={cat}
-              onClick={() => store.setSelectedCategory(cat === 'ALL' ? null : cat)}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all border whitespace-nowrap ${
-                isSelected
-                  ? 'bg-[#00f0ff]/20 text-[#00f0ff] border-[#00f0ff] shadow-[0_0_10px_rgba(0,240,255,0.25)]'
-                  : 'bg-slate-950/60 text-slate-400 border-white/5 hover:text-slate-200 hover:border-white/20'
-              }`}
-            >
-              {cat}
-            </button>
-          );
-        })}
-      </div>
 
       {/* ================= MIDDLE REGION (SIDEBAR & INSPECTOR) ================= */}
       <main className="flex-1 flex justify-between items-start my-2 pointer-events-none overflow-hidden relative">
@@ -195,7 +195,7 @@ export default function TelemetryHUD() {
           initial={{ x: -30, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           onWheel={(e) => e.stopPropagation()}
-          className={`pointer-events-auto glass-panel rounded-xl p-4 transition-all duration-300 relative flex flex-col max-h-[calc(100vh-220px)] ${
+          className={`pointer-events-auto glass-panel rounded-xl p-4 transition-all duration-300 relative flex flex-col max-h-[calc(100vh-180px)] ${
             leftPanelCollapsed ? 'w-12' : 'w-80 md:w-96'
           }`}
         >
