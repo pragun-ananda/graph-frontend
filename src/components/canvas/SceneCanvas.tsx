@@ -874,9 +874,6 @@ export default function SceneCanvas() {
         {/* Deep Space Background Distant Starfield Layer */}
         <DeepSpaceStarfield />
 
-        {/* Soft Radial Galactic Core Glow at Geometric Center */}
-        <GalacticCoreGlow />
-
         <KnowledgeGraphEdges />
 
         {/* Directional Energy Flow Particles along Prerequisite Edges (Solar Wind) */}
