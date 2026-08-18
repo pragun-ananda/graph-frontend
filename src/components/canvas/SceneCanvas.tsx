@@ -868,12 +868,12 @@ function CameraRig({ controlsRef, introRef }: { controlsRef: React.RefObject<Orb
     const controls = controlsRef.current;
     if (!controls) return;
 
-    // 1. Deep Space Hyper-Drive Swoop Sequence on page load/refresh (Lands at z = 24.0 to fill center of page)
+    // 1. Deep Space Hyper-Drive Swoop Sequence on page load/refresh (Lands at z = 17.0 to fill center of page)
     if (introRef.current < 1.0) {
       const t = Math.min(1.0, introRef.current);
       const easedT = 1 - Math.pow(1 - t, 4); // Quartic Ease Out for hyper-drive deceleration
 
-      const targetZ = selectedTopicId ? 24.0 : 24.0 / Math.max(0.3, zoomLevel);
+      const targetZ = selectedTopicId ? 17.0 : 17.0 / Math.max(0.3, zoomLevel);
       const startZ = 175.0;
       const currentZ = THREE.MathUtils.lerp(startZ, targetZ, easedT);
 
@@ -905,7 +905,7 @@ function CameraRig({ controlsRef, introRef }: { controlsRef: React.RefObject<Orb
       } else {
         // Zoom out to homepage full graph overview centered in screen
         const targetPos = new THREE.Vector3(0, 0, 0);
-        const camTargetPos = new THREE.Vector3(0, 0, 24.0 / Math.max(0.3, zoomLevel));
+        const camTargetPos = new THREE.Vector3(0, 0, 17.0 / Math.max(0.3, zoomLevel));
 
         controls.target.lerp(targetPos, delta * 5.0);
         camera.position.lerp(camTargetPos, delta * 5.0);
