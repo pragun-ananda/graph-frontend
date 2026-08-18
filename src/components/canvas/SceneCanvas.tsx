@@ -745,19 +745,19 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
         />
       </mesh>
 
-      {/* 1. Mastery Visual Ring (100% Full Orbit or Partial Arc for In-Progress) */}
-      {masteryGeometry && (
+      {/* Mastery Visual Progress Ring (Only shows up after clicking on the node) */}
+      {isSelected && masteryGeometry && (
         <mesh ref={masteryRingRef} geometry={masteryGeometry} frustumCulled={false}>
           <meshBasicMaterial
             color={isMastered ? '#ffffff' : nodeColor}
             side={THREE.DoubleSide}
             transparent
-            opacity={!isCategoryMatched || !isSearchMatched ? 0.12 : isMastered ? 0.88 : 0.72}
+            opacity={isMastered ? 0.92 : 0.78}
           />
         </mesh>
       )}
 
-      {/* 2. Interactive Selection & Hover Outer Reticle Ring */}
+      {/* Interactive Selection & Hover Outer Reticle Ring */}
       {(isSelected || isHovered) && (
         <mesh ref={selectionRingRef} frustumCulled={false}>
           <ringGeometry args={[0.62, 0.74, 32]} />
