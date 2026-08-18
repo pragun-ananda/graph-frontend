@@ -7,29 +7,35 @@ import { useStore } from '../../store/useStore';
 import { TopicNode } from '../../types/telemetry';
 import PostProcessing from './PostProcessing';
 
-// Expanded 10-Color Spectral Neon Palette
-const NEON_PALETTE = [
-  '#00f0ff', // Electric Cyan
-  '#ff007f', // Hot Pink / Magenta
-  '#a855f7', // Cosmic Purple / Violet
-  '#ffe600', // Solar Electric Yellow
-  '#00ff9d', // Matrix Emerald
-  '#ff3366', // Vivid Crimson
-  '#3b82f6', // Deep Electric Blue
-  '#ff7700', // Neon Warm Orange
-  '#e040fb', // Neon Orchid Pink
-  '#00e5ff'  // Bright Electric Aqua
-];
+// Overarching base HSL hues per domain subgraph
+const DOMAIN_HUES: Record<string, number> = {
+  'AI & ML': 0.52,       // ~187° Electric Cyan
+  'CS': 0.91,            // ~328° Hot Pink / Magenta
+  'SYSTEMS': 0.75,       // ~270° Cosmic Purple / Violet
+  'MATH': 0.14,          // ~50° Solar Electric Yellow / Gold
+  'PHYSICS': 0.43,       // ~155° Matrix Emerald Green
+  'CYBERSECURITY': 0.96, // ~345° Vivid Coral Crimson
+  'ARCH': 0.60           // ~216° Deep Electric Blue
+};
 
-// Deterministically pick a random neon color per node ID
-const getNodeRandomColor = (id: string): string => {
+// Deterministically derive different shades/tints of the subgraph's overarching color
+const getCategoryShade = (id: string, category: string): string => {
+  const baseHue = DOMAIN_HUES[category] ?? 0.52;
+
   let hash = 0;
   for (let i = 0; i < id.length; i++) {
     hash = (hash << 5) - hash + id.charCodeAt(i);
     hash |= 0;
   }
-  const index = Math.abs(hash) % NEON_PALETTE.length;
-  return NEON_PALETTE[index];
+  const positiveHash = Math.abs(hash);
+
+  // Vary Saturation (78% to 100%) and Lightness (45% to 68%) for rich shades
+  const sat = 0.78 + ((positiveHash % 100) / 100) * 0.22;
+  const light = 0.45 + (((positiveHash >> 3) % 100) / 100) * 0.23;
+
+  const color = new THREE.Color();
+  color.setHSL(baseHue, sat, light);
+  return '#' + color.getHexString();
 };
 
 // Shader for Solar Wind Edge Energy Flow Particles
@@ -106,13 +112,13 @@ function SolarWindEnergyStreams() {
     const amber = new THREE.Color('#ffaa00');
 
     topicNodes.forEach((source) => {
-      const sourceColorHex = getNodeRandomColor(source.id);
+      const sourceColorHex = getCategoryShade(source.id, source.category);
       const sourceColor = new THREE.Color(sourceColorHex);
 
       source.unlocks.forEach((targetId) => {
         const target = nodeMap.get(targetId);
         if (target) {
-          const targetColorHex = getNodeRandomColor(target.id);
+          const targetColorHex = getCategoryShade(target.id, target.category);
           const targetColor = new THREE.Color(targetColorHex);
           const photonsPerEdge = 3;
 
@@ -553,7 +559,7 @@ function SynapseParticleCloud() {
 
 const sharedSphereGeometry = new THREE.SphereGeometry(0.38, 16, 16);
 
-// Interactive Knowledge Node Component with Bounded Label Scaling
+// Interactive Knowledge Node Component with Distinct Subgraph Shades
 const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
   const meshRef = useRef<THREE.Mesh>(null!);
   const ringRef = useRef<THREE.Mesh>(null!);
@@ -574,8 +580,8 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
 
   const nodeColor = useMemo(() => {
     if (!isCategoryMatched || !isSearchMatched) return '#334155';
-    return getNodeRandomColor(node.id);
-  }, [node.id, isCategoryMatched, isSearchMatched]);
+    return getCategoryShade(node.id, node.category);
+  }, [node.id, node.category, isCategoryMatched, isSearchMatched]);
 
   useFrame((_, delta) => {
     if (ringRef.current) {
@@ -598,7 +604,7 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
 
   return (
     <group position={node.coordinates}>
-      {/* 4-Point Starlight Flare */}
+      {/* 4-Point Starlight Flare matched to node's category shade */}
       <AnamorphicStarGlint
         color={nodeColor}
         scale={glintScale}
@@ -639,7 +645,7 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
         </mesh>
       )}
 
-      {/* Bounded HTML Label Tag (distanceFactor=24 prevents giant out-of-screen text) */}
+      {/* Bounded HTML Label Tag */}
       {showLabel && (
         <Html
           position={[0, 0.65, 0]}
