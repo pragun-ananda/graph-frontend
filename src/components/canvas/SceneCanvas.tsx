@@ -57,13 +57,13 @@ const getOutgoingEdgeColor = (activeColorHex: string): string => {
   return '#' + outgoing.getHexString();
 };
 
-// Calculate dynamic single-line font size to fit title perfectly without wrapping
+// Calculate dynamic single-line font size to fit title perfectly without wrapping or extending past screen
 const getSingleLineFontSize = (len: number): string => {
-  if (len > 40) return 'text-[7.5px]';
-  if (len > 32) return 'text-[8.5px]';
-  if (len > 24) return 'text-[9.5px]';
-  if (len > 16) return 'text-[10px]';
-  return 'text-[11px]';
+  if (len > 40) return 'text-[6.5px] tracking-normal';
+  if (len > 30) return 'text-[7.5px] tracking-normal';
+  if (len > 22) return 'text-[8.5px] tracking-wide';
+  if (len > 14) return 'text-[9.5px] tracking-wider';
+  return 'text-[10.5px] tracking-wider';
 };
 
 // Shader for Solar Wind Edge Energy Flow Particles
@@ -356,11 +356,11 @@ const DeepSpaceShaderMaterial = {
       vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
       gl_Position = projectionMatrix * mvPosition;
 
-      // Soft distance size attenuation
-      gl_PointSize = aSize * (170.0 / -mvPosition.z);
+      // Soft distance size attenuation with boosted point visibility
+      gl_PointSize = aSize * (210.0 / -mvPosition.z);
 
       // Gentle deep-space twinkling
-      float twinkle = sin(uTime * 1.5 + aPhase) * 0.25 + 0.75;
+      float twinkle = sin(uTime * 1.8 + aPhase) * 0.22 + 0.78;
       vAlpha = twinkle;
     }
   `,
@@ -372,9 +372,9 @@ const DeepSpaceShaderMaterial = {
       float dist = length(gl_PointCoord - vec2(0.5));
       if (dist > 0.5) discard;
 
-      // Soft circular star point with radial glow
+      // Soft circular star point with crisp, brighter starlight
       float intensity = smoothstep(0.5, 0.0, dist);
-      gl_FragColor = vec4(vColor, intensity * vAlpha * 0.75);
+      gl_FragColor = vec4(vColor * 1.35, intensity * vAlpha * 1.15);
     }
   `
 };
@@ -638,11 +638,11 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
                 ? `0 0 12px ${nodeColor}`
                 : undefined
             }}
-            className={`px-3 py-1 rounded font-mono font-bold uppercase tracking-wider border transition-all duration-200 whitespace-nowrap ${getSingleLineFontSize(node.name.length)} ${
+            className={`px-2.5 py-1 rounded font-mono font-bold uppercase border whitespace-nowrap transition-all duration-200 max-w-[85vw] ${getSingleLineFontSize(node.name.length)} ${
               isSelected
-                ? 'text-slate-950 scale-105'
+                ? 'text-slate-950 scale-105 shadow-xl'
                 : isHovered
-                ? 'text-slate-950'
+                ? 'text-slate-950 shadow-md'
                 : 'bg-[#080c16]/85 text-slate-200 border-white/10 backdrop-blur-md opacity-90 hover:border-[#00f0ff]'
             }`}
           >
@@ -770,10 +770,12 @@ function CameraRig({ controlsRef }: { controlsRef: React.RefObject<OrbitControls
       const selectedNode = topicNodes.find((n) => n.id === selectedTopicId);
 
       if (selectedNode) {
-        // Zoom into selected node
+        // Zoom into selected node with dynamic camera framing distance based on title length
         const [nx, ny, nz] = selectedNode.coordinates;
+        const titleLen = selectedNode.name.length;
+        const distOffset = titleLen > 30 ? 11.5 : titleLen > 20 ? 9.8 : 8.5;
         const targetPos = new THREE.Vector3(nx, ny, nz);
-        const camTargetPos = new THREE.Vector3(nx, ny + 0.4, nz + 8.5 / Math.max(0.5, zoomLevel));
+        const camTargetPos = new THREE.Vector3(nx, ny + 0.4, nz + distOffset / Math.max(0.5, zoomLevel));
 
         controls.target.lerp(targetPos, delta * 7.0);
         camera.position.lerp(camTargetPos, delta * 7.0);
