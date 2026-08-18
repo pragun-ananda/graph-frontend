@@ -15,7 +15,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
-  Sparkles,
   Target,
   Search,
   Compass,
@@ -125,22 +124,9 @@ export default function TelemetryHUD() {
 
   return (
     <div className="pointer-events-none fixed inset-0 z-20 flex flex-col justify-between p-4 md:p-6 overflow-hidden">
-      {/* ================= UNIFIED TOP BAR (BRANDING, CLUSTERS & SEARCH) ================= */}
-      <header className="pointer-events-auto glass-panel px-4 py-2.5 rounded-lg flex items-center justify-between gap-4 relative">
-        <div className="absolute -top-0.5 -left-0.5 w-2 h-2 border-t-2 border-l-2 border-[#00f0ff]" />
-        <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 border-b-2 border-r-2 border-[#00f0ff]" />
-
-        {/* 1. Branding & Title */}
-        <div className="flex items-center gap-2.5 flex-shrink-0">
-          <Sparkles size={18} className="text-[#00f0ff] animate-pulse" />
-          <h1 className="font-display font-extrabold text-sm md:text-base tracking-wider text-slate-100 uppercase">
-            COSMOS
-          </h1>
-        </div>
-
-        <div className="h-4 w-px bg-white/10 hidden sm:block flex-shrink-0" />
-
-        {/* 2. Domain Cluster Navigation Bar */}
+      {/* ================= TRANSPARENT TOP CLUSTER & SEARCH BAR (NO BACKGROUND & NO COSMOS TITLE) ================= */}
+      <header className="pointer-events-auto flex items-center justify-between gap-4 bg-transparent py-1 px-1">
+        {/* 1. Domain Cluster Quick-Jump Navigation Buttons */}
         <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 font-mono text-xs max-w-full no-scrollbar">
           <span className="text-slate-500 font-bold items-center gap-1 mr-1 hidden lg:flex flex-shrink-0">
             <Compass size={13} className="text-[#00f0ff]" /> CLUSTERS:
@@ -151,10 +137,10 @@ export default function TelemetryHUD() {
               <button
                 key={cat}
                 onClick={() => store.setSelectedCategory(cat === 'ALL' ? null : cat)}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all border whitespace-nowrap flex-shrink-0 ${
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all border whitespace-nowrap flex-shrink-0 ${
                   isSelected
-                    ? 'bg-[#00f0ff]/20 text-[#00f0ff] border-[#00f0ff] shadow-[0_0_10px_rgba(0,240,255,0.25)]'
-                    : 'bg-slate-950/60 text-slate-400 border-white/5 hover:text-slate-200 hover:border-white/20'
+                    ? 'bg-[#00f0ff]/20 text-[#00f0ff] border-[#00f0ff] shadow-[0_0_12px_rgba(0,240,255,0.3)] backdrop-blur-md'
+                    : 'bg-[#080c16]/60 text-slate-400 border-white/10 hover:text-slate-200 hover:border-white/25 backdrop-blur-sm'
                 }`}
               >
                 {cat}
@@ -163,10 +149,8 @@ export default function TelemetryHUD() {
           })}
         </div>
 
-        <div className="h-4 w-px bg-white/10 hidden sm:block flex-shrink-0" />
-
-        {/* 3. Collapsible Quick Search Bar */}
-        <div className="flex items-center bg-slate-950/80 border border-white/10 rounded-lg p-1 font-mono text-xs flex-shrink-0">
+        {/* 2. Collapsible Quick Search Bar */}
+        <div className="flex items-center bg-[#080c16]/70 border border-white/10 rounded-lg p-1 font-mono text-xs flex-shrink-0 backdrop-blur-md">
           <AnimatePresence initial={false} mode="wait">
             {isSearchOpen ? (
               <motion.div
@@ -431,7 +415,7 @@ export default function TelemetryHUD() {
           )}
         </AnimatePresence>
 
-        {/* Right Selected Knowledge Concept Inspector Card (Opens on SEE TOPIC click) */}
+        {/* Right Selected Knowledge Concept Inspector Card (Opens on EXPLORE click) */}
         <AnimatePresence>
           {selectedNode && store.isInspectorOpen && (
             <motion.div
