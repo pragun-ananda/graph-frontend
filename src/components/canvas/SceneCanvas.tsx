@@ -553,7 +553,7 @@ function SynapseParticleCloud() {
 
 const sharedSphereGeometry = new THREE.SphereGeometry(0.38, 16, 16);
 
-// Interactive Knowledge Node Component with Dampened Ambient Glow
+// Interactive Knowledge Node Component with Bounded Label Scaling
 const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
   const meshRef = useRef<THREE.Mesh>(null!);
   const ringRef = useRef<THREE.Mesh>(null!);
@@ -592,14 +592,13 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
     setSelectedTopicId(node.id);
   };
 
-  // Dampened Ambient Glow for idle nodes, remaining highly prominent on hover & select
   const glintScale = isSelected ? 1.6 : isHovered ? 1.1 : 0.38;
   const glintOpacity = isSelected ? 0.95 : isHovered ? 0.75 : 0.22;
   const emissiveVal = isSelected ? 2.4 : isHovered ? 1.4 : 0.55;
 
   return (
     <group position={node.coordinates}>
-      {/* 4-Point Starlight Flare (Dampened subtle ambient glow, prominent on select/hover) */}
+      {/* 4-Point Starlight Flare */}
       <AnamorphicStarGlint
         color={nodeColor}
         scale={glintScale}
@@ -640,11 +639,12 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
         </mesh>
       )}
 
+      {/* Bounded HTML Label Tag (distanceFactor=24 prevents giant out-of-screen text) */}
       {showLabel && (
         <Html
           position={[0, 0.65, 0]}
           center
-          distanceFactor={14}
+          distanceFactor={24}
           zIndexRange={[100, 0]}
           className="pointer-events-auto select-none cursor-pointer"
         >
@@ -659,18 +659,18 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
                 ? `0 0 12px ${nodeColor}`
                 : undefined
             }}
-            className={`px-2.5 py-1 rounded text-[11px] font-mono font-bold uppercase tracking-wider border whitespace-nowrap transition-all duration-200 ${
+            className={`px-2.5 py-1 rounded text-[11px] font-mono font-bold uppercase tracking-wider border whitespace-nowrap transition-all duration-200 max-w-[260px] truncate ${
               isSelected
-                ? 'text-slate-950 scale-110'
+                ? 'text-slate-950 scale-105'
                 : isHovered
                 ? 'text-slate-950'
                 : 'bg-[#080c16]/85 text-slate-200 border-white/10 backdrop-blur-md opacity-90 hover:border-[#00f0ff]'
             }`}
           >
-            <div className="flex items-center gap-1.5">
-              <span>{node.name}</span>
+            <div className="flex items-center gap-1.5 truncate">
+              <span className="truncate">{node.name}</span>
               {(isSelected || isHovered) && (
-                <span className="text-[9px] px-1 bg-slate-950/40 rounded text-slate-950 font-extrabold">
+                <span className="text-[9px] px-1 bg-slate-950/40 rounded text-slate-950 font-extrabold flex-shrink-0">
                   {node.mastery}%
                 </span>
               )}
@@ -763,7 +763,7 @@ function KnowledgeGraphEdges() {
   );
 }
 
-// Camera Rig: Instant smooth fly-to lerp when a node selection occurs
+// Camera Rig: Comfortable cinematic fly-to zoom (nz + 8.5 / zoomLevel)
 function CameraRig({ controlsRef }: { controlsRef: React.RefObject<OrbitControlsImpl> }) {
   const { camera } = useThree();
   const topicNodes = useStore((state) => state.topicNodes);
@@ -791,7 +791,7 @@ function CameraRig({ controlsRef }: { controlsRef: React.RefObject<OrbitControls
     if (selectedNode && isAnimating.current) {
       const [nx, ny, nz] = selectedNode.coordinates;
       const targetPos = new THREE.Vector3(nx, ny, nz);
-      const camTargetPos = new THREE.Vector3(nx, ny + 0.3, nz + 4.0 / zoomLevel);
+      const camTargetPos = new THREE.Vector3(nx, ny + 0.4, nz + 8.5 / zoomLevel);
 
       controls.target.lerp(targetPos, delta * 7.0);
       camera.position.lerp(camTargetPos, delta * 7.0);
