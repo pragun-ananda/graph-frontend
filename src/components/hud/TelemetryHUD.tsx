@@ -474,14 +474,9 @@ export default function TelemetryHUD() {
 
                 {/* 1. PREREQUISITES SECTION */}
                 <div className="pt-2.5 border-t border-white/10 space-y-2">
-                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-200">
-                    <div className="flex items-center gap-1.5 text-[#ffaa00]">
-                      <ShieldAlert size={13} />
-                      <span>PREREQUISITES</span>
-                    </div>
-                    <span className="text-[10px] text-[#ffaa00] font-bold">
-                      {selectedNode.prerequisites.length} REQ
-                    </span>
+                  <div className="flex items-center gap-1.5 text-[#ffaa00] text-[11px] font-bold">
+                    <ShieldAlert size={13} />
+                    <span>PREREQUISITES</span>
                   </div>
 
                   <div className="space-y-1.5">
@@ -518,14 +513,9 @@ export default function TelemetryHUD() {
 
                 {/* 2. LEARN NEXT SECTION */}
                 <div className="pt-2.5 border-t border-white/10 space-y-2">
-                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-200">
-                    <div className="flex items-center gap-1.5 text-[#00ff9d]">
-                      <Zap size={13} />
-                      <span>LEARN NEXT</span>
-                    </div>
-                    <span className="text-[10px] text-[#00ff9d] font-bold">
-                      {selectedNode.unlocks.length} UNLOCKED
-                    </span>
+                  <div className="flex items-center gap-1.5 text-[#00ff9d] text-[11px] font-bold">
+                    <Zap size={13} />
+                    <span>LEARN NEXT</span>
                   </div>
 
                   <div className="space-y-1.5">
