@@ -83,6 +83,7 @@ export interface TelemetryState {
   topicNodes: TopicNode[];
   selectedTopicId: string | null;
   hoveredTopicId: string | null;
+  isInspectorOpen: boolean;
   todos: StudyTodo[];
   pomodoro: PomodoroState;
 
@@ -118,6 +119,7 @@ export interface TelemetryActions {
 
   // Knowledge Graph Actions
   setSelectedTopicId: (id: string | null) => void;
+  setIsInspectorOpen: (open: boolean) => void;
   addTopicNode: (node: Omit<TopicNode, 'id'>) => void;
   updateTopicMastery: (id: string, mastery: number) => void;
 

@@ -1306,8 +1306,9 @@ const INITIAL_STATE: TelemetryState = {
   selectedCategory: null,
 
   topicNodes: INITIAL_TOPICS,
-  selectedTopicId: 'TOPIC-001',
+  selectedTopicId: null,
   hoveredTopicId: null,
+  isInspectorOpen: false,
   todos: INITIAL_TODOS,
   pomodoro: INITIAL_POMODORO,
 
@@ -1346,10 +1347,11 @@ export const useStore = create<TelemetryStore>((set) => ({
   setHoveredTopicId: (hoveredTopicId: string | null) => set({ hoveredTopicId }),
 
   // Knowledge Graph Actions
+  setIsInspectorOpen: (isInspectorOpen: boolean) => set({ isInspectorOpen }),
   setSelectedTopicId: (selectedTopicId: string | null) =>
     set((state) => {
       const nextZoom = selectedTopicId ? Math.max(1.8, state.zoomLevel) : state.zoomLevel;
-      return { selectedTopicId, zoomLevel: nextZoom };
+      return { selectedTopicId, isInspectorOpen: false, zoomLevel: nextZoom };
     }),
   addTopicNode: (node: Omit<TopicNode, 'id'>) =>
     set((state) => {

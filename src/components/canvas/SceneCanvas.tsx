@@ -691,7 +691,7 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
                 ? `0 0 12px ${nodeColor}`
                 : undefined
             }}
-            className={`px-2.5 py-1 rounded text-[11px] font-mono font-bold uppercase tracking-wider border whitespace-nowrap transition-all duration-200 max-w-[260px] truncate ${
+            className={`px-2.5 py-1 rounded text-[11px] font-mono font-bold uppercase tracking-wider border whitespace-nowrap transition-all duration-200 max-w-[320px] ${
               isSelected
                 ? 'text-slate-950 scale-105'
                 : isHovered
@@ -699,12 +699,23 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
                 : 'bg-[#080c16]/85 text-slate-200 border-white/10 backdrop-blur-md opacity-90 hover:border-[#00f0ff]'
             }`}
           >
-            <div className="flex items-center gap-1.5 truncate">
-              <span className="truncate">{node.name}</span>
+            <div className="flex items-center gap-1.5">
+              <span className="truncate max-w-[160px]">{node.name}</span>
               {(isSelected || isHovered) && (
                 <span className="text-[9px] px-1 bg-slate-950/40 rounded text-slate-950 font-extrabold flex-shrink-0">
                   {node.mastery}%
                 </span>
+              )}
+              {isSelected && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    useStore.getState().setIsInspectorOpen(true);
+                  }}
+                  className="ml-1 px-2 py-0.5 bg-slate-950 text-slate-100 hover:bg-white hover:text-slate-950 rounded text-[9px] font-black tracking-normal flex items-center gap-1 transition-all shadow-lg flex-shrink-0 cursor-pointer"
+                >
+                  SEE TOPIC →
+                </button>
               )}
             </div>
           </div>

@@ -366,9 +366,31 @@ export default function TelemetryHUD() {
           )}
         </motion.div>
 
-        {/* Right Selected Knowledge Concept Inspector Card */}
+        {/* Floating "SEE TOPIC" Action Button when a node is zoomed/selected but inspector is closed */}
         <AnimatePresence>
-          {selectedNode && (
+          {selectedNode && !store.isInspectorOpen && (
+            <motion.div
+              initial={{ x: 50, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: 50, opacity: 0 }}
+              className="pointer-events-auto mr-4"
+            >
+              <button
+                onClick={() => store.setIsInspectorOpen(true)}
+                className="glass-panel px-4 py-3 rounded-xl border border-[#00f0ff]/50 bg-[#080c16]/90 text-slate-100 font-mono text-xs font-bold tracking-wider hover:bg-[#00f0ff]/20 hover:border-[#00f0ff] hover:shadow-[0_0_22px_rgba(0,240,255,0.4)] transition-all flex items-center gap-2.5 shadow-2xl"
+              >
+                <BookOpen size={16} className="text-[#00f0ff]" />
+                <span>SEE TOPIC:</span>
+                <span className="text-[#00f0ff] uppercase max-w-[200px] truncate">{selectedNode.name}</span>
+                <span className="text-xs text-[#00f0ff]">→</span>
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Right Selected Knowledge Concept Inspector Card (Opens on SEE TOPIC click) */}
+        <AnimatePresence>
+          {selectedNode && store.isInspectorOpen && (
             <motion.div
               initial={{ x: 40, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
@@ -380,11 +402,12 @@ export default function TelemetryHUD() {
               <div className="flex items-center justify-between border-b border-white/10 pb-2.5 flex-shrink-0">
                 <div className="flex items-center gap-2">
                   <Target size={15} className="text-[#00f0ff]" />
-                  <span className="font-bold text-slate-100 uppercase tracking-wider">{selectedNode.name}</span>
+                  <span className="font-bold text-slate-100 uppercase tracking-wider truncate max-w-[220px]">{selectedNode.name}</span>
                 </div>
                 <button
-                  onClick={() => store.setSelectedTopicId(null)}
-                  className="text-slate-400 hover:text-slate-100 p-1"
+                  onClick={() => store.setIsInspectorOpen(false)}
+                  className="text-slate-400 hover:text-slate-100 p-1 font-bold"
+                  title="Close Inspector"
                 >
                   ✕
                 </button>
