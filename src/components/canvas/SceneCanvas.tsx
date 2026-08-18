@@ -187,13 +187,10 @@ const useConnectedGraph = () => {
 // Shader for Solar Wind Edge Energy Flow Particles
 const SolarWindShaderMaterial = {
   uniforms: {
-    uTime: { value: 0 },
-    uIntroProgress: { value: 0 }
+    uTime: { value: 0 }
   },
   vertexShader: `
     uniform float uTime;
-    uniform float uIntroProgress;
-
     attribute vec3 aStart;
     attribute vec3 aEnd;
     attribute float aSpeed;
@@ -211,9 +208,8 @@ const SolarWindShaderMaterial = {
 
       vColor = aColor;
 
-      // Soft parabolic alpha fade with hyper-drive fly-in fade
-      float introAlpha = smoothstep(0.2, 0.85, uIntroProgress);
-      vAlpha = sin(progress * 3.14159265) * introAlpha;
+      // Soft parabolic alpha fade
+      vAlpha = sin(progress * 3.14159265);
 
       vec4 mvPosition = modelViewMatrix * vec4(currentPos, 1.0);
       gl_Position = projectionMatrix * mvPosition;
@@ -235,7 +231,7 @@ const SolarWindShaderMaterial = {
   `
 };
 
-function SolarWindEnergyStreams({ introRef }: { introRef: React.MutableRefObject<number> }) {
+function SolarWindEnergyStreams() {
   const pointsRef = useRef<THREE.Points>(null!);
   const materialRef = useRef<THREE.ShaderMaterial>(null!);
 
@@ -312,7 +308,6 @@ function SolarWindEnergyStreams({ introRef }: { introRef: React.MutableRefObject
   useFrame((_, delta) => {
     if (materialRef.current) {
       materialRef.current.uniforms.uTime.value += delta;
-      materialRef.current.uniforms.uIntroProgress.value = introRef.current;
     }
   });
 
@@ -645,8 +640,8 @@ function DeepSpaceStarfield() {
 
 const sharedSphereGeometry = new THREE.SphereGeometry(0.38, 16, 16);
 
-// Interactive Knowledge Node Component with Tier-by-Tier Starlight Ignition on Camera Arrival
-const KnowledgeNode = React.memo(({ node, introRef }: { node: TopicNode; introRef: React.MutableRefObject<number> }) => {
+// Interactive Knowledge Node Component (Always fully formed and crisp during Deep Space Fly-In)
+const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
   const meshRef = useRef<THREE.Mesh>(null!);
   const ringRef = useRef<THREE.Mesh>(null!);
 
@@ -672,23 +667,12 @@ const KnowledgeNode = React.memo(({ node, introRef }: { node: TopicNode; introRe
     return getCategoryShade(node.id, node.category);
   }, [node.id, node.category, isCategoryMatched, isSearchMatched]);
 
-  const radius = useMemo(() => {
-    const [x, y, z] = node.coordinates;
-    return Math.sqrt(x * x + y * y + z * z);
-  }, [node.coordinates]);
-
   useFrame((_, delta) => {
     if (ringRef.current) {
       ringRef.current.rotation.z += delta * 1.5;
     }
     if (meshRef.current) {
-      const tierDelay = (radius / 35.0) * 0.45;
-      const ignitionProgress = Math.max(0, Math.min(1.0, (introRef.current - tierDelay) / 0.35));
-      const easedIgnition = 1 - Math.pow(1 - ignitionProgress, 3);
-
-      const baseScale = isSelected ? 1.8 : isHovered ? 1.4 : isConnectedComponent ? 1.15 : 1.0;
-      const targetScale = baseScale * easedIgnition;
-
+      const targetScale = isSelected ? 1.8 : isHovered ? 1.4 : isConnectedComponent ? 1.15 : 1.0;
       meshRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), delta * 6.0);
     }
   });
@@ -698,13 +682,9 @@ const KnowledgeNode = React.memo(({ node, introRef }: { node: TopicNode; introRe
     setSelectedTopicId(node.id);
   };
 
-  const tierDelay = (radius / 35.0) * 0.45;
-  const ignitionProgress = Math.max(0, Math.min(1.0, (introRef.current - tierDelay) / 0.35));
-  const easedIgnition = 1 - Math.pow(1 - ignitionProgress, 3);
-
-  const glintScale = (isSelected ? 1.6 : isHovered ? 1.1 : isConnectedComponent ? 0.72 : 0.38) * easedIgnition;
-  const glintOpacity = (isSelected ? 0.95 : isHovered ? 0.75 : isConnectedComponent ? 0.52 : 0.22) * easedIgnition;
-  const emissiveVal = (isSelected ? 2.4 : isHovered ? 1.4 : isConnectedComponent ? 0.95 : 0.55) * (0.4 + easedIgnition * 0.6);
+  const glintScale = isSelected ? 1.6 : isHovered ? 1.1 : isConnectedComponent ? 0.72 : 0.38;
+  const glintOpacity = isSelected ? 0.95 : isHovered ? 0.75 : isConnectedComponent ? 0.52 : 0.22;
+  const emissiveVal = isSelected ? 2.4 : isHovered ? 1.4 : isConnectedComponent ? 0.95 : 0.55;
 
   return (
     <group position={node.coordinates}>
@@ -736,8 +716,8 @@ const KnowledgeNode = React.memo(({ node, introRef }: { node: TopicNode; introRe
           emissiveIntensity={emissiveVal}
           roughness={0.2}
           metalness={0.8}
-          transparent={!isCategoryMatched || !isSearchMatched || easedIgnition < 0.99}
-          opacity={!isCategoryMatched || !isSearchMatched ? 0.2 : easedIgnition}
+          transparent={!isCategoryMatched || !isSearchMatched}
+          opacity={!isCategoryMatched || !isSearchMatched ? 0.2 : 1.0}
         />
       </mesh>
 
@@ -745,12 +725,12 @@ const KnowledgeNode = React.memo(({ node, introRef }: { node: TopicNode; introRe
       {(isSelected || isHovered) && (
         <mesh ref={ringRef} frustumCulled={false}>
           <ringGeometry args={[0.5, 0.62, 24]} />
-          <meshBasicMaterial color={nodeColor} side={THREE.DoubleSide} transparent opacity={0.85 * easedIgnition} />
+          <meshBasicMaterial color={nodeColor} side={THREE.DoubleSide} transparent opacity={0.85} />
         </mesh>
       )}
 
       {/* Well-Sized Single-Line HTML Label Tag (Never wraps, never cuts off) */}
-      {showLabel && easedIgnition > 0.5 && (
+      {showLabel && (
         <Html
           position={[0, 0.65, 0]}
           center
@@ -785,9 +765,8 @@ const KnowledgeNode = React.memo(({ node, introRef }: { node: TopicNode; introRe
   );
 });
 
-// Render 3D Directed Prerequisite & Unlocked Edges (Fade in as camera arrives)
-function KnowledgeGraphEdges({ introRef }: { introRef: React.MutableRefObject<number> }) {
-  const groupRef = useRef<THREE.Group>(null!);
+// Render 3D Directed Prerequisite & Unlocked Edges
+function KnowledgeGraphEdges() {
   const topicNodes = useStore((state) => state.topicNodes);
   const { activeId, activeNodeColorHex, nodeMap, directIncomingKeys, directOutgoingKeys, transitiveIncomingKeys, transitiveOutgoingKeys } = useConnectedGraph();
 
@@ -852,16 +831,8 @@ function KnowledgeGraphEdges({ introRef }: { introRef: React.MutableRefObject<nu
     return edgeList;
   }, [topicNodes, nodeMap, activeId, activeNodeColorHex, directIncomingKeys, directOutgoingKeys, transitiveIncomingKeys, transitiveOutgoingKeys]);
 
-  useFrame(() => {
-    const t = Math.min(1.0, introRef.current);
-    const easedT = 1 - Math.pow(1 - t, 3);
-    if (groupRef.current) {
-      groupRef.current.scale.setScalar(0.2 + 0.8 * easedT);
-    }
-  });
-
   return (
-    <group ref={groupRef}>
+    <group>
       {edges.map((edge, idx) => (
         <Line
           key={idx}
@@ -876,7 +847,7 @@ function KnowledgeGraphEdges({ introRef }: { introRef: React.MutableRefObject<nu
   );
 }
 
-// Camera Rig: Deep Space Hyper-Drive Fly-In Swoop (z = 165.0 -> 52.0) and cinematic node zoom
+// Camera Rig: Deep Space Hyper-Drive Fly-In Swoop (z = 175.0 -> 52.0) and cinematic node zoom
 function CameraRig({ controlsRef, introRef }: { controlsRef: React.RefObject<OrbitControlsImpl>; introRef: React.MutableRefObject<number> }) {
   const { camera } = useThree();
   const topicNodes = useStore((state) => state.topicNodes);
@@ -903,7 +874,7 @@ function CameraRig({ controlsRef, introRef }: { controlsRef: React.RefObject<Orb
       const easedT = 1 - Math.pow(1 - t, 4); // Quartic Ease Out for hyper-drive deceleration
 
       const targetZ = selectedTopicId ? 52.0 : 52.0 / Math.max(0.3, zoomLevel);
-      const startZ = 165.0;
+      const startZ = 175.0;
       const currentZ = THREE.MathUtils.lerp(startZ, targetZ, easedT);
 
       camera.position.set(0, 0, currentZ);
@@ -994,7 +965,7 @@ export default function SceneCanvas() {
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
         onPointerMissed={() => setSelectedTopicId(null)}
       >
-        <PerspectiveCamera makeDefault position={[0, 0, 165.0]} fov={60} />
+        <PerspectiveCamera makeDefault position={[0, 0, 175.0]} fov={60} />
         <OrbitControls
           makeDefault
           ref={controlsRef}
@@ -1014,13 +985,13 @@ export default function SceneCanvas() {
         {/* 3-Tier Deep Space Parallax Starfield Layer (Far, Mid, Foreground) */}
         <DeepSpaceStarfield />
 
-        <KnowledgeGraphEdges introRef={introRef} />
+        <KnowledgeGraphEdges />
 
         {/* Directional Energy Flow Particles along Prerequisite Edges (Solar Wind) */}
-        <SolarWindEnergyStreams introRef={introRef} />
+        <SolarWindEnergyStreams />
 
         {topicNodes.map((node) => (
-          <KnowledgeNode key={node.id} node={node} introRef={introRef} />
+          <KnowledgeNode key={node.id} node={node} />
         ))}
         
         <PostProcessing />
