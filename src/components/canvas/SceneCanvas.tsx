@@ -7,6 +7,27 @@ import { useStore } from '../../store/useStore';
 import { TopicNode } from '../../types/telemetry';
 import PostProcessing from './PostProcessing';
 
+// Get domain category spectral color for vibrant galaxy clusters
+const getCategoryColor = (category: string, status?: string): string => {
+  switch (category) {
+    case 'AI & ML': return '#00f0ff';       // Electric Cyan
+    case 'CS': return '#ff007f';            // Hot Pink / Magenta
+    case 'SYSTEMS': return '#a855f7';       // Cosmic Purple / Violet
+    case 'MATH': return '#ffe600';          // Solar Electric Yellow
+    case 'PHYSICS': return '#00ff9d';       // Matrix Emerald
+    case 'CYBERSECURITY': return '#ff3366'; // Vivid Coral Crimson
+    case 'ARCH': return '#3b82f6';         // Deep Galactic Blue
+    default:
+      switch (status) {
+        case 'MASTERED': return '#00ff9d';
+        case 'LEARNING': return '#00f0ff';
+        case 'DUE': return '#ffaa00';
+        case 'NEW': return '#ff3366';
+        default: return '#a855f7';
+      }
+  }
+};
+
 // Shader for Solar Wind Edge Energy Flow Particles
 const SolarWindShaderMaterial = {
   uniforms: {
@@ -79,14 +100,16 @@ function SolarWindEnergyStreams() {
     const colorList: number[] = [];
 
     const amber = new THREE.Color('#ffaa00');
-    const emerald = new THREE.Color('#00ff9d');
-    const ambientCyan = new THREE.Color('#00f0ff');
-    const ambientFaint = new THREE.Color('#ffffff');
 
     topicNodes.forEach((source) => {
+      const sourceColorHex = getCategoryColor(source.category, source.status);
+      const sourceColor = new THREE.Color(sourceColorHex);
+
       source.unlocks.forEach((targetId) => {
         const target = nodeMap.get(targetId);
         if (target) {
+          const targetColorHex = getCategoryColor(target.category, target.status);
+          const targetColor = new THREE.Color(targetColorHex);
           const photonsPerEdge = 3;
 
           for (let p = 0; p < photonsPerEdge; p++) {
@@ -95,18 +118,18 @@ function SolarWindEnergyStreams() {
             speedList.push(0.35 + Math.random() * 0.2);
             offsetList.push(p / photonsPerEdge + Math.random() * 0.08);
 
-            let col = ambientCyan;
+            let col = sourceColor;
             let sz = 0.5 + Math.random() * 0.3;
 
             if (activeId) {
               if (source.id === activeId) {
-                col = emerald; // Outgoing unlocked energy
+                col = targetColor; // Outgoing unlocked energy
                 sz = 1.0;
               } else if (target.id === activeId) {
                 col = amber; // Incoming prerequisite energy
                 sz = 1.0;
               } else {
-                col = ambientFaint;
+                col = sourceColor;
                 sz = 0.35;
               }
             }
@@ -525,7 +548,7 @@ function SynapseParticleCloud() {
 
 const sharedSphereGeometry = new THREE.SphereGeometry(0.38, 16, 16);
 
-// Interactive Knowledge Node Component
+// Interactive Knowledge Node Component with Expanded Domain Spectral Palette
 const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
   const meshRef = useRef<THREE.Mesh>(null!);
   const ringRef = useRef<THREE.Mesh>(null!);
@@ -546,14 +569,8 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
 
   const nodeColor = useMemo(() => {
     if (!isCategoryMatched || !isSearchMatched) return '#334155';
-    switch (node.status) {
-      case 'MASTERED': return '#00ff9d';
-      case 'LEARNING': return '#00f0ff';
-      case 'DUE': return '#ffaa00';
-      case 'NEW': return '#ff3366';
-      default: return '#00f0ff';
-    }
-  }, [node.status, isCategoryMatched, isSearchMatched]);
+    return getCategoryColor(node.category, node.status);
+  }, [node.category, node.status, isCategoryMatched, isSearchMatched]);
 
   useFrame((_, delta) => {
     if (ringRef.current) {
@@ -572,7 +589,7 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
 
   return (
     <group position={node.coordinates}>
-      {/* Anamorphic 4-Point Starlight Flare matched to node's exact status color */}
+      {/* Anamorphic 4-Point Starlight Flare matched to node's exact category/status color */}
       {(isSelected || isHovered) && (
         <AnamorphicStarGlint
           color={nodeColor}
@@ -598,7 +615,7 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
         <meshStandardMaterial
           color={nodeColor}
           emissive={nodeColor}
-          emissiveIntensity={isSelected ? 2.6 : isHovered ? 1.7 : 0.5}
+          emissiveIntensity={isSelected ? 2.6 : isHovered ? 1.7 : 0.6}
           roughness={0.2}
           metalness={0.8}
           transparent={!isCategoryMatched || !isSearchMatched}
@@ -606,7 +623,7 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
         />
       </mesh>
 
-      {/* Orbital ring matched to node's exact status color */}
+      {/* Orbital ring matched to node's exact spectral color */}
       {(isSelected || isHovered) && (
         <mesh ref={ringRef} frustumCulled={false}>
           <ringGeometry args={[0.5, 0.62, 24]} />
