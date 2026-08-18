@@ -640,10 +640,11 @@ function DeepSpaceStarfield() {
 
 const sharedSphereGeometry = new THREE.SphereGeometry(0.38, 16, 16);
 
-// Interactive Knowledge Node Component (Always fully formed and crisp during Deep Space Fly-In)
+// Interactive Knowledge Node Component with Mastery Visual Rings
 const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
   const meshRef = useRef<THREE.Mesh>(null!);
-  const ringRef = useRef<THREE.Mesh>(null!);
+  const selectionRingRef = useRef<THREE.Mesh>(null!);
+  const masteryRingRef = useRef<THREE.Mesh>(null!);
 
   const selectedTopicId = useStore((state) => state.selectedTopicId);
   const hoveredTopicId = useStore((state) => state.hoveredTopicId);
@@ -667,9 +668,29 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
     return getCategoryShade(node.id, node.category);
   }, [node.id, node.category, isCategoryMatched, isSearchMatched]);
 
-  useFrame((_, delta) => {
-    if (ringRef.current) {
-      ringRef.current.rotation.z += delta * 1.5;
+  const isMastered = node.mastery >= 95;
+  const isInProgress = node.mastery >= 10 && !isMastered;
+
+  // Memoize Mastery Ring Geometry (Full 360 ring for 100% Mastered, Partial Arc for In-Progress)
+  const masteryGeometry = useMemo(() => {
+    if (isMastered) {
+      return new THREE.RingGeometry(0.48, 0.56, 32);
+    }
+    if (isInProgress) {
+      const thetaLength = (node.mastery / 100) * Math.PI * 2;
+      return new THREE.RingGeometry(0.48, 0.56, 32, 1, -Math.PI / 2, thetaLength);
+    }
+    return null;
+  }, [isMastered, isInProgress, node.mastery]);
+
+  useFrame((state, delta) => {
+    if (selectionRingRef.current) {
+      selectionRingRef.current.quaternion.copy(state.camera.quaternion);
+      selectionRingRef.current.rotation.z += delta * 1.5;
+    }
+    if (masteryRingRef.current) {
+      masteryRingRef.current.quaternion.copy(state.camera.quaternion);
+      masteryRingRef.current.rotation.z += delta * 0.4;
     }
     if (meshRef.current) {
       const targetScale = isSelected ? 1.8 : isHovered ? 1.4 : isConnectedComponent ? 1.15 : 1.0;
@@ -682,13 +703,16 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
     setSelectedTopicId(node.id);
   };
 
-  const glintScale = isSelected ? 1.6 : isHovered ? 1.1 : isConnectedComponent ? 0.72 : 0.38;
-  const glintOpacity = isSelected ? 0.95 : isHovered ? 0.75 : isConnectedComponent ? 0.52 : 0.22;
-  const emissiveVal = isSelected ? 2.4 : isHovered ? 1.4 : isConnectedComponent ? 0.95 : 0.55;
+  const masteryGlintMultiplier = isMastered ? 1.28 : isInProgress ? 1.1 : 1.0;
+  const masteryEmissiveBoost = isMastered ? 0.35 : isInProgress ? 0.15 : 0.0;
+
+  const glintScale = (isSelected ? 1.6 : isHovered ? 1.1 : isConnectedComponent ? 0.72 : 0.38) * masteryGlintMultiplier;
+  const glintOpacity = Math.min(1.0, (isSelected ? 0.95 : isHovered ? 0.75 : isConnectedComponent ? 0.52 : 0.22) * (isMastered ? 1.25 : 1.0));
+  const emissiveVal = (isSelected ? 2.4 : isHovered ? 1.4 : isConnectedComponent ? 0.95 : 0.55) + masteryEmissiveBoost;
 
   return (
     <group position={node.coordinates}>
-      {/* 4-Point Starlight Flare matched to node's category shade */}
+      {/* 4-Point Starlight Flare matched to node's category shade & mastery level */}
       <AnamorphicStarGlint
         color={nodeColor}
         scale={glintScale}
@@ -721,11 +745,23 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
         />
       </mesh>
 
-      {/* Orbital ring for hovered or selected node */}
+      {/* 1. Mastery Visual Ring (100% Full Orbit or Partial Arc for In-Progress) */}
+      {masteryGeometry && (
+        <mesh ref={masteryRingRef} geometry={masteryGeometry} frustumCulled={false}>
+          <meshBasicMaterial
+            color={isMastered ? '#ffffff' : nodeColor}
+            side={THREE.DoubleSide}
+            transparent
+            opacity={!isCategoryMatched || !isSearchMatched ? 0.12 : isMastered ? 0.88 : 0.72}
+          />
+        </mesh>
+      )}
+
+      {/* 2. Interactive Selection & Hover Outer Reticle Ring */}
       {(isSelected || isHovered) && (
-        <mesh ref={ringRef} frustumCulled={false}>
-          <ringGeometry args={[0.5, 0.62, 24]} />
-          <meshBasicMaterial color={nodeColor} side={THREE.DoubleSide} transparent opacity={0.85} />
+        <mesh ref={selectionRingRef} frustumCulled={false}>
+          <ringGeometry args={[0.62, 0.74, 32]} />
+          <meshBasicMaterial color={nodeColor} side={THREE.DoubleSide} transparent opacity={0.92} />
         </mesh>
       )}
 
