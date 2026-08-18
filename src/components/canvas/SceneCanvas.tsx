@@ -883,15 +883,15 @@ function CameraRig({ controlsRef, introRef }: { controlsRef: React.RefObject<Orb
       return;
     }
 
-    // 2. Interactive Selection lerp (Comfortable, non-jarring zoom into selected node)
+    // 2. Interactive Selection lerp (Focused framing zoom into selected node)
     if (isAnimating.current) {
       const selectedNode = topicNodes.find((n) => n.id === selectedTopicId);
 
       if (selectedNode) {
-        // Zoom into selected node with comfortable framing distance
+        // Zoom into selected node with closer, focused framing distance
         const [nx, ny, nz] = selectedNode.coordinates;
         const titleLen = selectedNode.name.length;
-        const distOffset = titleLen > 30 ? 14.0 : titleLen > 20 ? 12.5 : 11.0;
+        const distOffset = titleLen > 30 ? 11.5 : titleLen > 20 ? 10.0 : 8.8;
         const targetPos = new THREE.Vector3(nx, ny, nz);
         const camTargetPos = new THREE.Vector3(nx, ny + 0.3, nz + distOffset);
 
