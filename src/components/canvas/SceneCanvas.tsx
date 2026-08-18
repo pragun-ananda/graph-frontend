@@ -66,6 +66,114 @@ const getSingleLineFontSize = (len: number): string => {
   return 'text-[10.5px] tracking-wider';
 };
 
+// Custom Hook: Full Transitive Connected Component Graph Traversal (Direct vs Transitive Paths)
+const useConnectedGraph = () => {
+  const topicNodes = useStore((state) => state.topicNodes);
+  const selectedTopicId = useStore((state) => state.selectedTopicId);
+  const hoveredTopicId = useStore((state) => state.hoveredTopicId);
+
+  const activeId = selectedTopicId || hoveredTopicId;
+
+  return useMemo(() => {
+    const nodeMap = new Map<string, TopicNode>();
+    topicNodes.forEach((n) => nodeMap.set(n.id, n));
+
+    const directIn = new Set<string>();
+    const directOut = new Set<string>();
+    const transIn = new Set<string>();
+    const transOut = new Set<string>();
+    const connectedNodeIds = new Set<string>();
+
+    if (!activeId || !nodeMap.has(activeId)) {
+      return {
+        activeId,
+        nodeMap,
+        activeNode: null,
+        activeNodeColorHex: null,
+        directIncomingKeys: directIn,
+        directOutgoingKeys: directOut,
+        transitiveIncomingKeys: transIn,
+        transitiveOutgoingKeys: transOut,
+        connectedNodeIds
+      };
+    }
+
+    const activeNode = nodeMap.get(activeId)!;
+    const activeNodeColorHex = getCategoryShade(activeNode.id, activeNode.category);
+    connectedNodeIds.add(activeId);
+
+    // 1. Upstream Transitive Prerequisites (Ancestors)
+    const ancestorQueue = [...activeNode.prerequisites];
+    const visitedAncestors = new Set<string>();
+
+    ancestorQueue.forEach((prereqId) => {
+      directIn.add(`${prereqId}->${activeId}`);
+      visitedAncestors.add(prereqId);
+      connectedNodeIds.add(prereqId);
+    });
+
+    let head = 0;
+    while (head < ancestorQueue.length) {
+      const currId = ancestorQueue[head++];
+      const currNode = nodeMap.get(currId);
+      if (!currNode) continue;
+
+      currNode.prerequisites.forEach((parentPrereqId) => {
+        const edgeKey = `${parentPrereqId}->${currId}`;
+        if (!directIn.has(edgeKey) && !transIn.has(edgeKey)) {
+          transIn.add(edgeKey);
+        }
+        if (!visitedAncestors.has(parentPrereqId)) {
+          visitedAncestors.add(parentPrereqId);
+          ancestorQueue.push(parentPrereqId);
+          connectedNodeIds.add(parentPrereqId);
+        }
+      });
+    }
+
+    // 2. Downstream Transitive Unlocks (Descendants)
+    const descendantQueue = [...activeNode.unlocks];
+    const visitedDescendants = new Set<string>();
+
+    descendantQueue.forEach((unlockId) => {
+      directOut.add(`${activeId}->${unlockId}`);
+      visitedDescendants.add(unlockId);
+      connectedNodeIds.add(unlockId);
+    });
+
+    head = 0;
+    while (head < descendantQueue.length) {
+      const currId = descendantQueue[head++];
+      const currNode = nodeMap.get(currId);
+      if (!currNode) continue;
+
+      currNode.unlocks.forEach((childUnlockId) => {
+        const edgeKey = `${currId}->${childUnlockId}`;
+        if (!directOut.has(edgeKey) && !transOut.has(edgeKey)) {
+          transOut.add(edgeKey);
+        }
+        if (!visitedDescendants.has(childUnlockId)) {
+          visitedDescendants.add(childUnlockId);
+          descendantQueue.push(childUnlockId);
+          connectedNodeIds.add(childUnlockId);
+        }
+      });
+    }
+
+    return {
+      activeId,
+      activeNode,
+      activeNodeColorHex,
+      nodeMap,
+      directIncomingKeys: directIn,
+      directOutgoingKeys: directOut,
+      transitiveIncomingKeys: transIn,
+      transitiveOutgoingKeys: transOut,
+      connectedNodeIds
+    };
+  }, [topicNodes, activeId]);
+};
+
 // Shader for Solar Wind Edge Energy Flow Particles
 const SolarWindShaderMaterial = {
   uniforms: {
@@ -118,22 +226,7 @@ function SolarWindEnergyStreams() {
   const materialRef = useRef<THREE.ShaderMaterial>(null!);
 
   const topicNodes = useStore((state) => state.topicNodes);
-  const selectedTopicId = useStore((state) => state.selectedTopicId);
-  const hoveredTopicId = useStore((state) => state.hoveredTopicId);
-
-  const activeId = selectedTopicId || hoveredTopicId;
-  const activeNode = useMemo(() => topicNodes.find((n) => n.id === activeId), [topicNodes, activeId]);
-
-  const activeNodeColorHex = useMemo(() => {
-    if (!activeNode) return null;
-    return getCategoryShade(activeNode.id, activeNode.category);
-  }, [activeNode]);
-
-  const nodeMap = useMemo(() => {
-    const map = new Map<string, TopicNode>();
-    topicNodes.forEach((node) => map.set(node.id, node));
-    return map;
-  }, [topicNodes]);
+  const { activeId, activeNodeColorHex, nodeMap, directIncomingKeys, directOutgoingKeys, transitiveIncomingKeys, transitiveOutgoingKeys } = useConnectedGraph();
 
   const { starts, ends, speeds, offsets, sizes, colors, count } = useMemo(() => {
     const startList: number[] = [];
@@ -153,6 +246,7 @@ function SolarWindEnergyStreams() {
       source.unlocks.forEach((targetId) => {
         const target = nodeMap.get(targetId);
         if (target) {
+          const edgeKey = `${source.id}->${target.id}`;
           const photonsPerEdge = 3;
 
           for (let p = 0; p < photonsPerEdge; p++) {
@@ -165,17 +259,25 @@ function SolarWindEnergyStreams() {
             let sz = 0.5 + Math.random() * 0.3;
 
             if (activeId && activeNodeColorHex) {
-              if (source.id === activeId) {
-                // Outgoing unlocked energy stream correlated to active node's color
+              if (directOutgoingKeys.has(edgeKey)) {
+                // Immediate Outgoing Unlocked Stream: Strong bright
                 col = outgoingCorrelatedCol ?? sourceColor;
-                sz = 1.05;
-              } else if (target.id === activeId) {
-                // Incoming prerequisite energy stream correlated to active node's color
+                sz = 1.1;
+              } else if (directIncomingKeys.has(edgeKey)) {
+                // Immediate Incoming Prerequisite Stream: Strong bright
                 col = incomingCorrelatedCol ?? sourceColor;
-                sz = 1.05;
+                sz = 1.1;
+              } else if (transitiveOutgoingKeys.has(edgeKey)) {
+                // Transitive Outgoing Path: Softer contrast light
+                col = outgoingCorrelatedCol ?? sourceColor;
+                sz = 0.65;
+              } else if (transitiveIncomingKeys.has(edgeKey)) {
+                // Transitive Incoming Path: Softer contrast light
+                col = incomingCorrelatedCol ?? sourceColor;
+                sz = 0.65;
               } else {
                 col = sourceColor;
-                sz = 0.35;
+                sz = 0.25;
               }
             }
 
@@ -195,7 +297,7 @@ function SolarWindEnergyStreams() {
       colors: new Float32Array(colorList),
       count: startList.length / 3
     };
-  }, [topicNodes, nodeMap, activeId, activeNodeColorHex]);
+  }, [topicNodes, nodeMap, activeId, activeNodeColorHex, directIncomingKeys, directOutgoingKeys, transitiveIncomingKeys, transitiveOutgoingKeys]);
 
   useFrame((_, delta) => {
     if (materialRef.current) {
@@ -544,8 +646,11 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
   const selectedCategory = useStore((state) => state.selectedCategory);
   const searchQuery = useStore((state) => state.searchQuery);
 
+  const { activeId, connectedNodeIds } = useConnectedGraph();
+
   const isSelected = selectedTopicId === node.id;
   const isHovered = hoveredTopicId === node.id;
+  const isConnectedComponent = activeId ? connectedNodeIds.has(node.id) : false;
   const isCategoryMatched = !selectedCategory || selectedCategory === 'ALL' || node.category === selectedCategory;
   const isSearchMatched = !searchQuery || node.name.toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -561,7 +666,7 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
       ringRef.current.rotation.z += delta * 1.5;
     }
     if (meshRef.current) {
-      const targetScale = isSelected ? 1.8 : isHovered ? 1.4 : 1.0;
+      const targetScale = isSelected ? 1.8 : isHovered ? 1.4 : isConnectedComponent ? 1.15 : 1.0;
       meshRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), delta * 6.0);
     }
   });
@@ -571,9 +676,9 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
     setSelectedTopicId(node.id);
   };
 
-  const glintScale = isSelected ? 1.6 : isHovered ? 1.1 : 0.38;
-  const glintOpacity = isSelected ? 0.95 : isHovered ? 0.75 : 0.22;
-  const emissiveVal = isSelected ? 2.4 : isHovered ? 1.4 : 0.55;
+  const glintScale = isSelected ? 1.6 : isHovered ? 1.1 : isConnectedComponent ? 0.72 : 0.38;
+  const glintOpacity = isSelected ? 0.95 : isHovered ? 0.75 : isConnectedComponent ? 0.52 : 0.22;
+  const emissiveVal = isSelected ? 2.4 : isHovered ? 1.4 : isConnectedComponent ? 0.95 : 0.55;
 
   return (
     <group position={node.coordinates}>
@@ -654,25 +759,10 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
   );
 });
 
-// Render 3D Directed Prerequisite & Unlocked Edges correlated to the active node's color
+// Render 3D Directed Prerequisite & Unlocked Edges (Direct strong highlights vs Transitive softer contrast highlights)
 function KnowledgeGraphEdges() {
   const topicNodes = useStore((state) => state.topicNodes);
-  const selectedTopicId = useStore((state) => state.selectedTopicId);
-  const hoveredTopicId = useStore((state) => state.hoveredTopicId);
-
-  const activeId = selectedTopicId || hoveredTopicId;
-  const activeNode = useMemo(() => topicNodes.find((n) => n.id === activeId), [topicNodes, activeId]);
-
-  const activeNodeColorHex = useMemo(() => {
-    if (!activeNode) return null;
-    return getCategoryShade(activeNode.id, activeNode.category);
-  }, [activeNode]);
-
-  const nodeMap = useMemo(() => {
-    const map = new Map<string, TopicNode>();
-    topicNodes.forEach((node) => map.set(node.id, node));
-    return map;
-  }, [topicNodes]);
+  const { activeId, activeNodeColorHex, nodeMap, directIncomingKeys, directOutgoingKeys, transitiveIncomingKeys, transitiveOutgoingKeys } = useConnectedGraph();
 
   const edges = useMemo(() => {
     const edgeList: {
@@ -698,19 +788,29 @@ function KnowledgeGraphEdges() {
 
             let color = 'rgba(255, 255, 255, 0.08)';
             let lineWidth = 0.7;
-            let opacity = 0.2;
+            let opacity = 0.12;
 
-            if (activeNode && activeNodeColorHex) {
-              if (source.id === activeNode.id) {
-                // Outgoing unlocked edge correlated to active node's color
+            if (activeId && activeNodeColorHex) {
+              if (directOutgoingKeys.has(key)) {
+                // 1. Immediate Outgoing Unlocked Edge (Strong Electric Bright)
                 color = outgoingCorrelatedCol;
-                lineWidth = 2.6;
-                opacity = 0.95;
-              } else if (target.id === activeNode.id) {
-                // Incoming prerequisite edge correlated to active node's color
+                lineWidth = 2.8;
+                opacity = 0.98;
+              } else if (directIncomingKeys.has(key)) {
+                // 2. Immediate Incoming Prerequisite Edge (Strong Luminous Bright)
                 color = incomingCorrelatedCol;
-                lineWidth = 2.6;
-                opacity = 0.95;
+                lineWidth = 2.8;
+                opacity = 0.98;
+              } else if (transitiveOutgoingKeys.has(key)) {
+                // 3. Transitive Downstream Unlocked Path (Softer Contrast Light)
+                color = outgoingCorrelatedCol;
+                lineWidth = 1.35;
+                opacity = 0.42;
+              } else if (transitiveIncomingKeys.has(key)) {
+                // 4. Transitive Upstream Prerequisite Path (Softer Contrast Light)
+                color = incomingCorrelatedCol;
+                lineWidth = 1.35;
+                opacity = 0.42;
               }
             }
 
@@ -727,7 +827,7 @@ function KnowledgeGraphEdges() {
     });
 
     return edgeList;
-  }, [topicNodes, nodeMap, activeNode, activeNodeColorHex]);
+  }, [topicNodes, nodeMap, activeId, activeNodeColorHex, directIncomingKeys, directOutgoingKeys, transitiveIncomingKeys, transitiveOutgoingKeys]);
 
   return (
     <group>
