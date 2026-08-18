@@ -206,7 +206,7 @@ const SolarWindShaderMaterial = {
       vColor = aColor;
 
       // Soft parabolic alpha fade with intro explosion fade-in
-      float introAlpha = smoothstep(0.3, 0.95, uIntroProgress);
+      float introAlpha = smoothstep(0.2, 0.9, uIntroProgress);
       vAlpha = sin(progress * 3.14159265) * introAlpha;
 
       vec4 mvPosition = modelViewMatrix * vec4(currentPos, 1.0);
@@ -695,14 +695,9 @@ const KnowledgeNode = React.memo(({ node, introRef }: { node: TopicNode; introRe
     setSelectedTopicId(node.id);
   };
 
-  const t = Math.min(1.0, introRef.current);
-
-  // Ignition flash boost during initial explosion phase
-  const ignitionBoost = t < 0.3 ? (1.0 - t / 0.3) * 1.2 : 0;
-
-  const glintScale = (isSelected ? 1.6 : isHovered ? 1.1 : isConnectedComponent ? 0.72 : 0.38) + ignitionBoost * 0.8;
-  const glintOpacity = Math.min(1.0, (isSelected ? 0.95 : isHovered ? 0.75 : isConnectedComponent ? 0.52 : 0.22) + ignitionBoost);
-  const emissiveVal = (isSelected ? 2.4 : isHovered ? 1.4 : isConnectedComponent ? 0.95 : 0.55) + ignitionBoost * 2.0;
+  const glintScale = isSelected ? 1.6 : isHovered ? 1.1 : isConnectedComponent ? 0.72 : 0.38;
+  const glintOpacity = isSelected ? 0.95 : isHovered ? 0.75 : isConnectedComponent ? 0.52 : 0.22;
+  const emissiveVal = isSelected ? 2.4 : isHovered ? 1.4 : isConnectedComponent ? 0.95 : 0.55;
 
   return (
     <group ref={groupRef} position={[0, 0, 0]}>
@@ -783,18 +778,11 @@ const KnowledgeNode = React.memo(({ node, introRef }: { node: TopicNode; introRe
   );
 });
 
-// Render 3D Directed Prerequisite & Unlocked Edges (Dynamic Big Bang lerp & opacity ignition)
+// Render 3D Directed Prerequisite & Unlocked Edges (GPU Group scale lerp during intro)
 function KnowledgeGraphEdges({ introRef }: { introRef: React.MutableRefObject<number> }) {
+  const groupRef = useRef<THREE.Group>(null!);
   const topicNodes = useStore((state) => state.topicNodes);
   const { activeId, activeNodeColorHex, nodeMap, directIncomingKeys, directOutgoingKeys, transitiveIncomingKeys, transitiveOutgoingKeys } = useConnectedGraph();
-
-  const edgesRef = useRef<{
-    start: [number, number, number];
-    end: [number, number, number];
-    color: string;
-    lineWidth: number;
-    baseOpacity: number;
-  }[]>([]);
 
   const edges = useMemo(() => {
     const edgeList: {
@@ -854,40 +842,29 @@ function KnowledgeGraphEdges({ introRef }: { introRef: React.MutableRefObject<nu
       });
     });
 
-    edgesRef.current = edgeList;
     return edgeList;
   }, [topicNodes, nodeMap, activeId, activeNodeColorHex, directIncomingKeys, directOutgoingKeys, transitiveIncomingKeys, transitiveOutgoingKeys]);
-
-  const [introOpacity, setIntroOpacity] = React.useState(0);
 
   useFrame(() => {
     const t = Math.min(1.0, introRef.current);
     const easedT = 1 - Math.pow(1 - t, 3);
-    const fadeOpacity = Math.max(0, (easedT - 0.35) / 0.65);
-    if (Math.abs(fadeOpacity - introOpacity) > 0.02) {
-      setIntroOpacity(fadeOpacity);
+    if (groupRef.current) {
+      groupRef.current.scale.set(easedT, easedT, easedT);
     }
   });
 
   return (
-    <group>
-      {edges.map((edge, idx) => {
-        const t = Math.min(1.0, introRef.current);
-        const easedT = 1 - Math.pow(1 - t, 3);
-        const scaledStart: [number, number, number] = [edge.start[0] * easedT, edge.start[1] * easedT, edge.start[2] * easedT];
-        const scaledEnd: [number, number, number] = [edge.end[0] * easedT, edge.end[1] * easedT, edge.end[2] * easedT];
-
-        return (
-          <Line
-            key={idx}
-            points={[scaledStart, scaledEnd]}
-            color={edge.color}
-            lineWidth={edge.lineWidth}
-            transparent
-            opacity={edge.baseOpacity * introOpacity}
-          />
-        );
-      })}
+    <group ref={groupRef}>
+      {edges.map((edge, idx) => (
+        <Line
+          key={idx}
+          points={[edge.start, edge.end]}
+          color={edge.color}
+          lineWidth={edge.lineWidth}
+          transparent
+          opacity={edge.baseOpacity}
+        />
+      ))}
     </group>
   );
 }
