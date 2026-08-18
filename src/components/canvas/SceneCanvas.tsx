@@ -883,20 +883,20 @@ function CameraRig({ controlsRef, introRef }: { controlsRef: React.RefObject<Orb
       return;
     }
 
-    // 2. Interactive Selection lerp
+    // 2. Interactive Selection lerp (Comfortable, non-jarring zoom into selected node)
     if (isAnimating.current) {
       const selectedNode = topicNodes.find((n) => n.id === selectedTopicId);
 
       if (selectedNode) {
-        // Zoom into selected node with dynamic camera framing distance based on title length
+        // Zoom into selected node with comfortable framing distance
         const [nx, ny, nz] = selectedNode.coordinates;
         const titleLen = selectedNode.name.length;
-        const distOffset = titleLen > 30 ? 11.5 : titleLen > 20 ? 9.8 : 8.5;
+        const distOffset = titleLen > 30 ? 14.0 : titleLen > 20 ? 12.5 : 11.0;
         const targetPos = new THREE.Vector3(nx, ny, nz);
-        const camTargetPos = new THREE.Vector3(nx, ny + 0.4, nz + distOffset / Math.max(0.5, zoomLevel));
+        const camTargetPos = new THREE.Vector3(nx, ny + 0.3, nz + distOffset);
 
-        controls.target.lerp(targetPos, delta * 7.0);
-        camera.position.lerp(camTargetPos, delta * 7.0);
+        controls.target.lerp(targetPos, delta * 4.5);
+        camera.position.lerp(camTargetPos, delta * 4.5);
         controls.update();
 
         if (controls.target.distanceTo(targetPos) < 0.05 && camera.position.distanceTo(camTargetPos) < 0.1) {
@@ -907,8 +907,8 @@ function CameraRig({ controlsRef, introRef }: { controlsRef: React.RefObject<Orb
         const targetPos = new THREE.Vector3(0, 0, 0);
         const camTargetPos = new THREE.Vector3(0, 0, 22.0 / Math.max(0.3, zoomLevel));
 
-        controls.target.lerp(targetPos, delta * 5.0);
-        camera.position.lerp(camTargetPos, delta * 5.0);
+        controls.target.lerp(targetPos, delta * 4.5);
+        camera.position.lerp(camTargetPos, delta * 4.5);
         controls.update();
 
         if (controls.target.distanceTo(targetPos) < 0.05 && camera.position.distanceTo(camTargetPos) < 0.1) {
