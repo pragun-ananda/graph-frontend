@@ -177,10 +177,13 @@ const useConnectedGraph = () => {
 // Shader for Solar Wind Edge Energy Flow Particles
 const SolarWindShaderMaterial = {
   uniforms: {
-    uTime: { value: 0 }
+    uTime: { value: 0 },
+    uIntroProgress: { value: 0 }
   },
   vertexShader: `
     uniform float uTime;
+    uniform float uIntroProgress;
+
     attribute vec3 aStart;
     attribute vec3 aEnd;
     attribute float aSpeed;
@@ -192,14 +195,19 @@ const SolarWindShaderMaterial = {
     varying float vAlpha;
 
     void main() {
+      // Lerp edge start and end positions during Big Bang explosion intro
+      vec3 easedStart = aStart * uIntroProgress;
+      vec3 easedEnd = aEnd * uIntroProgress;
+
       // Lerp progress along directed prerequisite vector (A -> B)
       float progress = fract(uTime * aSpeed + aOffset);
-      vec3 currentPos = mix(aStart, aEnd, progress);
+      vec3 currentPos = mix(easedStart, easedEnd, progress);
 
       vColor = aColor;
 
-      // Soft parabolic alpha fade (fade in at start, peak at middle, fade out at end)
-      vAlpha = sin(progress * 3.14159265);
+      // Soft parabolic alpha fade with intro explosion fade-in
+      float introAlpha = smoothstep(0.3, 0.95, uIntroProgress);
+      vAlpha = sin(progress * 3.14159265) * introAlpha;
 
       vec4 mvPosition = modelViewMatrix * vec4(currentPos, 1.0);
       gl_Position = projectionMatrix * mvPosition;
@@ -221,7 +229,7 @@ const SolarWindShaderMaterial = {
   `
 };
 
-function SolarWindEnergyStreams() {
+function SolarWindEnergyStreams({ introRef }: { introRef: React.MutableRefObject<number> }) {
   const pointsRef = useRef<THREE.Points>(null!);
   const materialRef = useRef<THREE.ShaderMaterial>(null!);
 
@@ -260,19 +268,15 @@ function SolarWindEnergyStreams() {
 
             if (activeId && activeNodeColorHex) {
               if (directOutgoingKeys.has(edgeKey)) {
-                // Immediate Outgoing Unlocked Stream: Strong bright
                 col = outgoingCorrelatedCol ?? sourceColor;
                 sz = 1.1;
               } else if (directIncomingKeys.has(edgeKey)) {
-                // Immediate Incoming Prerequisite Stream: Strong bright
                 col = incomingCorrelatedCol ?? sourceColor;
                 sz = 1.1;
               } else if (transitiveOutgoingKeys.has(edgeKey)) {
-                // Transitive Outgoing Path: Softer contrast light
                 col = outgoingCorrelatedCol ?? sourceColor;
                 sz = 0.65;
               } else if (transitiveIncomingKeys.has(edgeKey)) {
-                // Transitive Incoming Path: Softer contrast light
                 col = incomingCorrelatedCol ?? sourceColor;
                 sz = 0.65;
               } else {
@@ -302,6 +306,7 @@ function SolarWindEnergyStreams() {
   useFrame((_, delta) => {
     if (materialRef.current) {
       materialRef.current.uniforms.uTime.value += delta;
+      materialRef.current.uniforms.uIntroProgress.value = introRef.current;
     }
   });
 
@@ -634,8 +639,9 @@ function DeepSpaceStarfield() {
 
 const sharedSphereGeometry = new THREE.SphereGeometry(0.38, 16, 16);
 
-// Interactive Knowledge Node Component with Well-Sized Single-Line Font Scaling
-const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
+// Interactive Knowledge Node Component with Big Bang Explosion Ignition Animation
+const KnowledgeNode = React.memo(({ node, introRef }: { node: TopicNode; introRef: React.MutableRefObject<number> }) => {
+  const groupRef = useRef<THREE.Group>(null!);
   const meshRef = useRef<THREE.Mesh>(null!);
   const ringRef = useRef<THREE.Mesh>(null!);
 
@@ -662,6 +668,19 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
   }, [node.id, node.category, isCategoryMatched, isSearchMatched]);
 
   useFrame((_, delta) => {
+    // 1. Big Bang Explosion Position Lerp
+    const t = Math.min(1.0, introRef.current);
+    const easedT = 1 - Math.pow(1 - t, 3); // Cubic Ease Out
+
+    if (groupRef.current) {
+      groupRef.current.position.set(
+        node.coordinates[0] * easedT,
+        node.coordinates[1] * easedT,
+        node.coordinates[2] * easedT
+      );
+    }
+
+    // 2. Orbital Ring & Node Scale Lerp
     if (ringRef.current) {
       ringRef.current.rotation.z += delta * 1.5;
     }
@@ -676,12 +695,17 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
     setSelectedTopicId(node.id);
   };
 
-  const glintScale = isSelected ? 1.6 : isHovered ? 1.1 : isConnectedComponent ? 0.72 : 0.38;
-  const glintOpacity = isSelected ? 0.95 : isHovered ? 0.75 : isConnectedComponent ? 0.52 : 0.22;
-  const emissiveVal = isSelected ? 2.4 : isHovered ? 1.4 : isConnectedComponent ? 0.95 : 0.55;
+  const t = Math.min(1.0, introRef.current);
+
+  // Ignition flash boost during initial explosion phase
+  const ignitionBoost = t < 0.3 ? (1.0 - t / 0.3) * 1.2 : 0;
+
+  const glintScale = (isSelected ? 1.6 : isHovered ? 1.1 : isConnectedComponent ? 0.72 : 0.38) + ignitionBoost * 0.8;
+  const glintOpacity = Math.min(1.0, (isSelected ? 0.95 : isHovered ? 0.75 : isConnectedComponent ? 0.52 : 0.22) + ignitionBoost);
+  const emissiveVal = (isSelected ? 2.4 : isHovered ? 1.4 : isConnectedComponent ? 0.95 : 0.55) + ignitionBoost * 2.0;
 
   return (
-    <group position={node.coordinates}>
+    <group ref={groupRef} position={[0, 0, 0]}>
       {/* 4-Point Starlight Flare matched to node's category shade */}
       <AnamorphicStarGlint
         color={nodeColor}
@@ -759,10 +783,18 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
   );
 });
 
-// Render 3D Directed Prerequisite & Unlocked Edges (Direct strong highlights vs Transitive softer contrast highlights)
-function KnowledgeGraphEdges() {
+// Render 3D Directed Prerequisite & Unlocked Edges (Dynamic Big Bang lerp & opacity ignition)
+function KnowledgeGraphEdges({ introRef }: { introRef: React.MutableRefObject<number> }) {
   const topicNodes = useStore((state) => state.topicNodes);
   const { activeId, activeNodeColorHex, nodeMap, directIncomingKeys, directOutgoingKeys, transitiveIncomingKeys, transitiveOutgoingKeys } = useConnectedGraph();
+
+  const edgesRef = useRef<{
+    start: [number, number, number];
+    end: [number, number, number];
+    color: string;
+    lineWidth: number;
+    baseOpacity: number;
+  }[]>([]);
 
   const edges = useMemo(() => {
     const edgeList: {
@@ -770,7 +802,7 @@ function KnowledgeGraphEdges() {
       end: [number, number, number];
       color: string;
       lineWidth: number;
-      opacity: number;
+      baseOpacity: number;
     }[] = [];
 
     const visited = new Set<string>();
@@ -788,29 +820,25 @@ function KnowledgeGraphEdges() {
 
             let color = 'rgba(255, 255, 255, 0.08)';
             let lineWidth = 0.7;
-            let opacity = 0.12;
+            let baseOpacity = 0.12;
 
             if (activeId && activeNodeColorHex) {
               if (directOutgoingKeys.has(key)) {
-                // 1. Immediate Outgoing Unlocked Edge (Strong Electric Bright)
                 color = outgoingCorrelatedCol;
                 lineWidth = 2.8;
-                opacity = 0.98;
+                baseOpacity = 0.98;
               } else if (directIncomingKeys.has(key)) {
-                // 2. Immediate Incoming Prerequisite Edge (Strong Luminous Bright)
                 color = incomingCorrelatedCol;
                 lineWidth = 2.8;
-                opacity = 0.98;
+                baseOpacity = 0.98;
               } else if (transitiveOutgoingKeys.has(key)) {
-                // 3. Transitive Downstream Unlocked Path (Softer Contrast Light)
                 color = outgoingCorrelatedCol;
                 lineWidth = 1.35;
-                opacity = 0.42;
+                baseOpacity = 0.42;
               } else if (transitiveIncomingKeys.has(key)) {
-                // 4. Transitive Upstream Prerequisite Path (Softer Contrast Light)
                 color = incomingCorrelatedCol;
                 lineWidth = 1.35;
-                opacity = 0.42;
+                baseOpacity = 0.42;
               }
             }
 
@@ -819,28 +847,47 @@ function KnowledgeGraphEdges() {
               end: target.coordinates,
               color,
               lineWidth,
-              opacity
+              baseOpacity
             });
           }
         }
       });
     });
 
+    edgesRef.current = edgeList;
     return edgeList;
   }, [topicNodes, nodeMap, activeId, activeNodeColorHex, directIncomingKeys, directOutgoingKeys, transitiveIncomingKeys, transitiveOutgoingKeys]);
 
+  const [introOpacity, setIntroOpacity] = React.useState(0);
+
+  useFrame(() => {
+    const t = Math.min(1.0, introRef.current);
+    const easedT = 1 - Math.pow(1 - t, 3);
+    const fadeOpacity = Math.max(0, (easedT - 0.35) / 0.65);
+    if (Math.abs(fadeOpacity - introOpacity) > 0.02) {
+      setIntroOpacity(fadeOpacity);
+    }
+  });
+
   return (
     <group>
-      {edges.map((edge, idx) => (
-        <Line
-          key={idx}
-          points={[edge.start, edge.end]}
-          color={edge.color}
-          lineWidth={edge.lineWidth}
-          transparent
-          opacity={edge.opacity}
-        />
-      ))}
+      {edges.map((edge, idx) => {
+        const t = Math.min(1.0, introRef.current);
+        const easedT = 1 - Math.pow(1 - t, 3);
+        const scaledStart: [number, number, number] = [edge.start[0] * easedT, edge.start[1] * easedT, edge.start[2] * easedT];
+        const scaledEnd: [number, number, number] = [edge.end[0] * easedT, edge.end[1] * easedT, edge.end[2] * easedT];
+
+        return (
+          <Line
+            key={idx}
+            points={[scaledStart, scaledEnd]}
+            color={edge.color}
+            lineWidth={edge.lineWidth}
+            transparent
+            opacity={edge.baseOpacity * introOpacity}
+          />
+        );
+      })}
     </group>
   );
 }
@@ -910,6 +957,18 @@ export default function SceneCanvas() {
   const zoomOut = useStore((state) => state.zoomOut);
   const controlsRef = useRef<OrbitControlsImpl>(null!);
 
+  const introRef = useRef(0);
+
+  useEffect(() => {
+    introRef.current = 0;
+  }, []);
+
+  useFrame((_, delta) => {
+    if (introRef.current < 1.0) {
+      introRef.current = Math.min(1.0, introRef.current + delta * 0.75);
+    }
+  });
+
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
@@ -960,13 +1019,13 @@ export default function SceneCanvas() {
         {/* 3-Tier Deep Space Parallax Starfield Layer (Far, Mid, Foreground) */}
         <DeepSpaceStarfield />
 
-        <KnowledgeGraphEdges />
+        <KnowledgeGraphEdges introRef={introRef} />
 
         {/* Directional Energy Flow Particles along Prerequisite Edges (Solar Wind) */}
-        <SolarWindEnergyStreams />
+        <SolarWindEnergyStreams introRef={introRef} />
 
         {topicNodes.map((node) => (
-          <KnowledgeNode key={node.id} node={node} />
+          <KnowledgeNode key={node.id} node={node} introRef={introRef} />
         ))}
         
         <PostProcessing />
