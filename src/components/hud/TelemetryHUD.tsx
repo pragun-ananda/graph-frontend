@@ -25,6 +25,7 @@ import {
   X
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
+import { TopicNode } from '../../types/telemetry';
 import * as THREE from 'three';
 
 const DOMAIN_HUES: Record<string, number> = {
@@ -53,6 +54,83 @@ const getCategoryShade = (id: string, category: string): string => {
   const color = new THREE.Color();
   color.setHSL(baseHue, sat, light);
   return '#' + color.getHexString();
+};
+
+// Topological Sort of all ancestor prerequisite nodes leading up to targetId
+const getTopologicalPrerequisites = (targetId: string, topicNodes: TopicNode[]): TopicNode[] => {
+  const nodeMap = new Map<string, TopicNode>();
+  topicNodes.forEach((node) => nodeMap.set(node.id, node));
+
+  const targetNode = nodeMap.get(targetId);
+  if (!targetNode) return [];
+
+  // 1. Collect all ancestor node IDs (excluding targetId itself)
+  const ancestorSet = new Set<string>();
+  const queue = [...targetNode.prerequisites];
+
+  while (queue.length > 0) {
+    const currId = queue.shift()!;
+    if (!ancestorSet.has(currId) && currId !== targetId) {
+      ancestorSet.add(currId);
+      const currNode = nodeMap.get(currId);
+      if (currNode) {
+        queue.push(...currNode.prerequisites);
+      }
+    }
+  }
+
+  if (ancestorSet.size === 0) return [];
+
+  // 2. Build in-degree map for nodes within ancestorSet
+  const inDegree = new Map<string, number>();
+  ancestorSet.forEach((id) => inDegree.set(id, 0));
+
+  ancestorSet.forEach((id) => {
+    const node = nodeMap.get(id);
+    if (node) {
+      node.prerequisites.forEach((pId: string) => {
+        if (ancestorSet.has(pId)) {
+          inDegree.set(id, (inDegree.get(id) ?? 0) + 1);
+        }
+      });
+    }
+  });
+
+  // 3. Kahn's Algorithm
+  const topoQueue: string[] = [];
+  inDegree.forEach((degree, id) => {
+    if (degree === 0) {
+      topoQueue.push(id);
+    }
+  });
+
+  const resultIds: string[] = [];
+  while (topoQueue.length > 0) {
+    const currId = topoQueue.shift()!;
+    resultIds.push(currId);
+
+    const currNode = nodeMap.get(currId);
+    if (currNode) {
+      currNode.unlocks.forEach((unlockId: string) => {
+        if (ancestorSet.has(unlockId)) {
+          const newDeg = (inDegree.get(unlockId) ?? 1) - 1;
+          inDegree.set(unlockId, newDeg);
+          if (newDeg === 0) {
+            topoQueue.push(unlockId);
+          }
+        }
+      });
+    }
+  }
+
+  // Fallback: include any remaining unvisited ancestors
+  ancestorSet.forEach((id) => {
+    if (!resultIds.includes(id)) {
+      resultIds.push(id);
+    }
+  });
+
+  return resultIds.map((id) => nodeMap.get(id)!).filter(Boolean);
 };
 
 export default function TelemetryHUD() {
@@ -116,6 +194,7 @@ export default function TelemetryHUD() {
   const completedTodosCount = store.todos.filter((t) => t.completed).length;
   const selectedNode = store.topicNodes.find((n) => n.id === store.selectedTopicId);
   const selectedNodeColor = selectedNode ? getCategoryShade(selectedNode.id, selectedNode.category) : '#00f0ff';
+  const topologicalPrereqs = selectedNode ? getTopologicalPrerequisites(selectedNode.id, store.topicNodes) : [];
 
   // Dynamic Mastery Score calculated per active Subgraph
   const activeSubgraphNodes = store.selectedCategory && store.selectedCategory !== 'ALL'
@@ -523,37 +602,41 @@ export default function TelemetryHUD() {
                   </div>
                 </div>
 
-                {/* 1. PREREQUISITES SECTION */}
+                {/* 1. TOPOLOGICAL PREREQUISITES SECTION */}
                 <div className="pt-2.5 border-t border-white/10 space-y-2">
-                  <div className="flex items-center gap-1.5 text-[#ffaa00] text-[11px] font-bold">
-                    <ShieldAlert size={13} />
-                    <span>PREREQUISITES</span>
+                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-200">
+                    <div className="flex items-center gap-1.5 text-[#ffaa00]">
+                      <ShieldAlert size={13} />
+                      <span>PREREQUISITES (TOPOLOGICAL ORDER)</span>
+                    </div>
+                    {topologicalPrereqs.length > 0 && (
+                      <span className="text-[10px] text-[#ffaa00] font-bold">
+                        {topologicalPrereqs.length} STEPS
+                      </span>
+                    )}
                   </div>
 
                   <div className="space-y-1.5">
-                    {selectedNode.prerequisites.length > 0 ? (
-                      selectedNode.prerequisites.map((prereqId) => {
-                        const prereqNode = store.topicNodes.find((n) => n.id === prereqId);
-                        if (!prereqNode) return null;
-
-                        return (
-                          <div
-                            key={prereqId}
-                            onClick={() => store.setSelectedTopicId(prereqNode.id)}
-                            className="p-2 rounded bg-slate-950/80 border border-[#ffaa00]/30 hover:border-[#ffaa00] text-slate-200 text-[11px] cursor-pointer transition-all flex items-center justify-between group"
-                          >
-                            <div className="flex items-center gap-1.5 truncate">
-                              <ArrowLeft size={12} className="text-[#ffaa00] flex-shrink-0 group-hover:-translate-x-0.5 transition-transform" />
-                              <span className="truncate font-semibold text-slate-200 group-hover:text-[#ffaa00]">
-                                {prereqNode.name}
-                              </span>
-                            </div>
-                            <span className="text-[10px] text-[#ffaa00] font-bold ml-2">
-                              {prereqNode.mastery}%
+                    {topologicalPrereqs.length > 0 ? (
+                      topologicalPrereqs.map((prereqNode, idx) => (
+                        <div
+                          key={prereqNode.id}
+                          onClick={() => store.setSelectedTopicId(prereqNode.id)}
+                          className="p-2 rounded bg-slate-950/80 border border-[#ffaa00]/30 hover:border-[#ffaa00] text-slate-200 text-[11px] cursor-pointer transition-all flex items-center justify-between group"
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <span className="text-[10px] font-mono font-extrabold text-[#ffaa00] bg-[#ffaa00]/15 px-1.5 py-0.5 rounded flex-shrink-0">
+                              {idx + 1}
+                            </span>
+                            <span className="truncate font-semibold text-slate-200 group-hover:text-[#ffaa00]">
+                              {prereqNode.name}
                             </span>
                           </div>
-                        );
-                      })
+                          <span className="text-[10px] text-[#ffaa00] font-bold ml-2 flex-shrink-0">
+                            {prereqNode.mastery}%
+                          </span>
+                        </div>
+                      ))
                     ) : (
                       <div className="text-[10px] text-slate-500 italic p-1">
                         No prerequisites required for this foundational topic.
