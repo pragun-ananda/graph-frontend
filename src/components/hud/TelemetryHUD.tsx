@@ -615,15 +615,6 @@ export default function TelemetryHUD() {
             {store.diagnostics.masteryScore}%
           </span>
         </div>
-
-        {/* Streak Box */}
-        <div className="glass-panel px-3.5 py-2 rounded-lg flex items-center gap-2 font-mono text-xs shadow-lg">
-          <Flame size={14} className="text-[#ffaa00]" />
-          <span className="text-slate-400">STREAK:</span>
-          <span className="text-[#ffaa00] font-bold">
-            {store.diagnostics.streakDays} DAYS
-          </span>
-        </div>
       </footer>
     </div>
   );
