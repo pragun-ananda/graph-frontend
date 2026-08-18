@@ -260,13 +260,14 @@ const StarlightGlintShaderMaterial = {
   `
 };
 
-function AnamorphicStarGlint({ color, scale = 1.0 }: { color: string; scale?: number }) {
+function AnamorphicStarGlint({ color, scale = 1.0, opacity = 0.95 }: { color: string; scale?: number; opacity?: number }) {
   const meshRef = useRef<THREE.Mesh>(null!);
   const materialRef = useRef<THREE.ShaderMaterial>(null!);
 
   useFrame((state, delta) => {
     if (materialRef.current) {
       materialRef.current.uniforms.uTime.value += delta;
+      materialRef.current.uniforms.uOpacity.value = opacity;
     }
     if (meshRef.current) {
       meshRef.current.quaternion.copy(state.camera.quaternion); // Always face camera (billboard)
@@ -279,13 +280,13 @@ function AnamorphicStarGlint({ color, scale = 1.0 }: { color: string; scale?: nu
       uniforms: {
         uTime: { value: 0 },
         uColor: { value: new THREE.Color(color) },
-        uOpacity: { value: 0.95 }
+        uOpacity: { value: opacity }
       },
       transparent: true,
       depthWrite: false,
       blending: THREE.AdditiveBlending
     });
-  }, [color]);
+  }, [color, opacity]);
 
   return (
     <mesh ref={meshRef} scale={[scale * 3.8, scale * 3.8, 1]} frustumCulled={false}>
@@ -552,7 +553,7 @@ function SynapseParticleCloud() {
 
 const sharedSphereGeometry = new THREE.SphereGeometry(0.38, 16, 16);
 
-// Interactive Knowledge Node Component with Random Spectral Colors
+// Interactive Knowledge Node Component with Ambient Glow & Prominent Selection Flare
 const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
   const meshRef = useRef<THREE.Mesh>(null!);
   const ringRef = useRef<THREE.Mesh>(null!);
@@ -591,15 +592,19 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
     setSelectedTopicId(node.id);
   };
 
+  // Ambient Starlight Glint for all nodes, scaling up prominently when hovered or selected
+  const glintScale = isSelected ? 1.75 : isHovered ? 1.25 : 0.6;
+  const glintOpacity = isSelected ? 1.0 : isHovered ? 0.85 : 0.45;
+  const emissiveVal = isSelected ? 2.8 : isHovered ? 1.8 : 1.1;
+
   return (
     <group position={node.coordinates}>
-      {/* Anamorphic 4-Point Starlight Flare matched to node's random color */}
-      {(isSelected || isHovered) && (
-        <AnamorphicStarGlint
-          color={nodeColor}
-          scale={isSelected ? 1.6 : 1.15}
-        />
-      )}
+      {/* 4-Point Starlight Flare (Soft ambient for all nodes, prominent on hover/select) */}
+      <AnamorphicStarGlint
+        color={nodeColor}
+        scale={glintScale}
+        opacity={glintOpacity}
+      />
 
       <mesh
         ref={meshRef}
@@ -619,15 +624,15 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
         <meshStandardMaterial
           color={nodeColor}
           emissive={nodeColor}
-          emissiveIntensity={isSelected ? 2.6 : isHovered ? 1.7 : 0.6}
-          roughness={0.2}
+          emissiveIntensity={emissiveVal}
+          roughness={0.15}
           metalness={0.8}
           transparent={!isCategoryMatched || !isSearchMatched}
           opacity={!isCategoryMatched || !isSearchMatched ? 0.2 : 1.0}
         />
       </mesh>
 
-      {/* Orbital ring matched to node's random color */}
+      {/* Orbital ring for hovered or selected node */}
       {(isSelected || isHovered) && (
         <mesh ref={ringRef} frustumCulled={false}>
           <ringGeometry args={[0.5, 0.62, 24]} />
