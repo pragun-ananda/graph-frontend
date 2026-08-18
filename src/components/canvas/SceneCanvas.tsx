@@ -38,6 +38,25 @@ const getCategoryShade = (id: string, category: string): string => {
   return '#' + color.getHexString();
 };
 
+// Derive distinct incoming (lighter/warmer) and outgoing (richer/electric) edge highlight shades correlated to the active node's color
+const getIncomingEdgeColor = (activeColorHex: string): string => {
+  const col = new THREE.Color(activeColorHex);
+  const hsl = { h: 0, s: 0, l: 0 };
+  col.getHSL(hsl);
+  const incoming = new THREE.Color();
+  incoming.setHSL((hsl.h + 0.04) % 1.0, Math.min(1.0, hsl.s * 0.9), Math.min(0.85, hsl.l + 0.22));
+  return '#' + incoming.getHexString();
+};
+
+const getOutgoingEdgeColor = (activeColorHex: string): string => {
+  const col = new THREE.Color(activeColorHex);
+  const hsl = { h: 0, s: 0, l: 0 };
+  col.getHSL(hsl);
+  const outgoing = new THREE.Color();
+  outgoing.setHSL((hsl.h - 0.04 + 1.0) % 1.0, Math.min(1.0, hsl.s * 1.05), Math.max(0.4, hsl.l - 0.06));
+  return '#' + outgoing.getHexString();
+};
+
 // Shader for Solar Wind Edge Energy Flow Particles
 const SolarWindShaderMaterial = {
   uniforms: {
@@ -94,6 +113,12 @@ function SolarWindEnergyStreams() {
   const hoveredTopicId = useStore((state) => state.hoveredTopicId);
 
   const activeId = selectedTopicId || hoveredTopicId;
+  const activeNode = useMemo(() => topicNodes.find((n) => n.id === activeId), [topicNodes, activeId]);
+
+  const activeNodeColorHex = useMemo(() => {
+    if (!activeNode) return null;
+    return getCategoryShade(activeNode.id, activeNode.category);
+  }, [activeNode]);
 
   const nodeMap = useMemo(() => {
     const map = new Map<string, TopicNode>();
@@ -109,7 +134,8 @@ function SolarWindEnergyStreams() {
     const sizeList: number[] = [];
     const colorList: number[] = [];
 
-    const amber = new THREE.Color('#ffaa00');
+    const incomingCorrelatedCol = activeNodeColorHex ? new THREE.Color(getIncomingEdgeColor(activeNodeColorHex)) : null;
+    const outgoingCorrelatedCol = activeNodeColorHex ? new THREE.Color(getOutgoingEdgeColor(activeNodeColorHex)) : null;
 
     topicNodes.forEach((source) => {
       const sourceColorHex = getCategoryShade(source.id, source.category);
@@ -118,8 +144,6 @@ function SolarWindEnergyStreams() {
       source.unlocks.forEach((targetId) => {
         const target = nodeMap.get(targetId);
         if (target) {
-          const targetColorHex = getCategoryShade(target.id, target.category);
-          const targetColor = new THREE.Color(targetColorHex);
           const photonsPerEdge = 3;
 
           for (let p = 0; p < photonsPerEdge; p++) {
@@ -131,13 +155,15 @@ function SolarWindEnergyStreams() {
             let col = sourceColor;
             let sz = 0.5 + Math.random() * 0.3;
 
-            if (activeId) {
+            if (activeId && activeNodeColorHex) {
               if (source.id === activeId) {
-                col = targetColor; // Outgoing unlocked energy
-                sz = 1.0;
+                // Outgoing unlocked energy stream correlated to active node's color
+                col = outgoingCorrelatedCol ?? sourceColor;
+                sz = 1.05;
               } else if (target.id === activeId) {
-                col = amber; // Incoming prerequisite energy
-                sz = 1.0;
+                // Incoming prerequisite energy stream correlated to active node's color
+                col = incomingCorrelatedCol ?? sourceColor;
+                sz = 1.05;
               } else {
                 col = sourceColor;
                 sz = 0.35;
@@ -160,7 +186,7 @@ function SolarWindEnergyStreams() {
       colors: new Float32Array(colorList),
       count: startList.length / 3
     };
-  }, [topicNodes, nodeMap, activeId]);
+  }, [topicNodes, nodeMap, activeId, activeNodeColorHex]);
 
   useFrame((_, delta) => {
     if (materialRef.current) {
@@ -688,7 +714,7 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
   );
 });
 
-// Render 3D Directed Prerequisite & Unlocked Edges
+// Render 3D Directed Prerequisite & Unlocked Edges correlated to the active node's color
 function KnowledgeGraphEdges() {
   const topicNodes = useStore((state) => state.topicNodes);
   const selectedTopicId = useStore((state) => state.selectedTopicId);
@@ -696,6 +722,11 @@ function KnowledgeGraphEdges() {
 
   const activeId = selectedTopicId || hoveredTopicId;
   const activeNode = useMemo(() => topicNodes.find((n) => n.id === activeId), [topicNodes, activeId]);
+
+  const activeNodeColorHex = useMemo(() => {
+    if (!activeNode) return null;
+    return getCategoryShade(activeNode.id, activeNode.category);
+  }, [activeNode]);
 
   const nodeMap = useMemo(() => {
     const map = new Map<string, TopicNode>();
@@ -714,6 +745,9 @@ function KnowledgeGraphEdges() {
 
     const visited = new Set<string>();
 
+    const incomingCorrelatedCol = activeNodeColorHex ? getIncomingEdgeColor(activeNodeColorHex) : '#ffaa00';
+    const outgoingCorrelatedCol = activeNodeColorHex ? getOutgoingEdgeColor(activeNodeColorHex) : '#00ff9d';
+
     topicNodes.forEach((source) => {
       source.unlocks.forEach((targetId) => {
         const target = nodeMap.get(targetId);
@@ -726,13 +760,15 @@ function KnowledgeGraphEdges() {
             let lineWidth = 0.7;
             let opacity = 0.2;
 
-            if (activeNode) {
+            if (activeNode && activeNodeColorHex) {
               if (source.id === activeNode.id) {
-                color = '#00ff9d';
+                // Outgoing unlocked edge correlated to active node's color
+                color = outgoingCorrelatedCol;
                 lineWidth = 2.6;
                 opacity = 0.95;
               } else if (target.id === activeNode.id) {
-                color = '#ffaa00';
+                // Incoming prerequisite edge correlated to active node's color
+                color = incomingCorrelatedCol;
                 lineWidth = 2.6;
                 opacity = 0.95;
               }
@@ -751,7 +787,7 @@ function KnowledgeGraphEdges() {
     });
 
     return edgeList;
-  }, [topicNodes, nodeMap, activeNode]);
+  }, [topicNodes, nodeMap, activeNode, activeNodeColorHex]);
 
   return (
     <group>
