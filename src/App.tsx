@@ -7,6 +7,10 @@ import { useStore } from './store/useStore';
 export default function App() {
   const store = useStore();
 
+  useEffect(() => {
+    document.title = 'Knowledge Graph';
+  }, []);
+
   // Mouse / Pointer tracker updating global normalized telemetry coordinates
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {
