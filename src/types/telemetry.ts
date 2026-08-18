@@ -78,6 +78,7 @@ export interface TelemetryState {
   // Navigation & Filtering
   searchQuery: string;
   selectedCategory: string | null;
+  hoveredCategory: string | null;
 
   // Knowledge Graph & Study Data
   topicNodes: TopicNode[];
@@ -115,6 +116,7 @@ export interface TelemetryActions {
   // Search & Navigation Setters
   setSearchQuery: (query: string) => void;
   setSelectedCategory: (category: string | null) => void;
+  setHoveredCategory: (category: string | null) => void;
   setHoveredTopicId: (id: string | null) => void;
 
   // Knowledge Graph Actions

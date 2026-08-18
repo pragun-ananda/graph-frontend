@@ -1304,6 +1304,7 @@ const INITIAL_STATE: TelemetryState = {
 
   searchQuery: '',
   selectedCategory: null,
+  hoveredCategory: null,
 
   topicNodes: INITIAL_TOPICS,
   selectedTopicId: null,
@@ -1344,6 +1345,7 @@ export const useStore = create<TelemetryStore>((set) => ({
   // Search & Filter Actions
   setSearchQuery: (searchQuery: string) => set({ searchQuery }),
   setSelectedCategory: (selectedCategory: string | null) => set({ selectedCategory }),
+  setHoveredCategory: (hoveredCategory: string | null) => set({ hoveredCategory }),
   setHoveredTopicId: (hoveredTopicId: string | null) => set({ hoveredTopicId }),
 
   // Knowledge Graph Actions
