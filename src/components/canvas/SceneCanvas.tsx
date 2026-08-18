@@ -699,14 +699,7 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
                 : 'bg-[#080c16]/85 text-slate-200 border-white/10 backdrop-blur-md opacity-90 hover:border-[#00f0ff]'
             }`}
           >
-            <div className="flex items-center gap-1.5 truncate">
-              <span className="truncate">{node.name}</span>
-              {(isSelected || isHovered) && (
-                <span className="text-[9px] px-1 bg-slate-950/40 rounded text-slate-950 font-extrabold flex-shrink-0">
-                  {node.mastery}%
-                </span>
-              )}
-            </div>
+            <span className="truncate">{node.name}</span>
           </div>
         </Html>
       )}

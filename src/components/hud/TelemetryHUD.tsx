@@ -396,7 +396,7 @@ export default function TelemetryHUD() {
           )}
         </motion.div>
 
-        {/* Floating "SEE TOPIC" Action Button on the Bottom Right of the Screen */}
+        {/* Floating "EXPLORE" Action Button on the Bottom Right of the Screen */}
         <AnimatePresence>
           {selectedNode && !store.isInspectorOpen && (
             <motion.div
@@ -415,9 +415,15 @@ export default function TelemetryHUD() {
                 className="px-5 py-3 rounded-xl border text-slate-100 font-mono text-xs font-bold tracking-wider hover:scale-105 transition-all flex items-center gap-3 backdrop-blur-md shadow-2xl cursor-pointer"
               >
                 <BookOpen size={16} style={{ color: selectedNodeColor }} />
-                <span>SEE TOPIC:</span>
+                <span>EXPLORE:</span>
                 <span className="uppercase font-extrabold" style={{ color: selectedNodeColor }}>
                   {selectedNode.name}
+                </span>
+                <span
+                  className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-slate-950/80 border border-white/10"
+                  style={{ color: selectedNodeColor }}
+                >
+                  {selectedNode.mastery}%
                 </span>
                 <span className="text-sm font-bold" style={{ color: selectedNodeColor }}>→</span>
               </button>
