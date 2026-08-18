@@ -26,6 +26,35 @@ import {
   X
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
+import * as THREE from 'three';
+
+const DOMAIN_HUES: Record<string, number> = {
+  'AI & ML': 0.52,       // ~187° Electric Cyan
+  'CS': 0.91,            // ~328° Hot Pink / Magenta
+  'SYSTEMS': 0.75,       // ~270° Cosmic Purple / Violet
+  'MATH': 0.14,          // ~50° Solar Electric Yellow / Gold
+  'PHYSICS': 0.43,       // ~155° Matrix Emerald Green
+  'CYBERSECURITY': 0.96, // ~345° Vivid Coral Crimson
+  'ARCH': 0.60           // ~216° Deep Electric Blue
+};
+
+const getCategoryShade = (id: string, category: string): string => {
+  const baseHue = DOMAIN_HUES[category] ?? 0.52;
+
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash << 5) - hash + id.charCodeAt(i);
+    hash |= 0;
+  }
+  const positiveHash = Math.abs(hash);
+
+  const sat = 0.78 + ((positiveHash % 100) / 100) * 0.22;
+  const light = 0.45 + (((positiveHash >> 3) % 100) / 100) * 0.23;
+
+  const color = new THREE.Color();
+  color.setHSL(baseHue, sat, light);
+  return '#' + color.getHexString();
+};
 
 export default function TelemetryHUD() {
   const store = useStore();
@@ -86,6 +115,7 @@ export default function TelemetryHUD() {
   const categories = ['ALL', 'AI & ML', 'CS', 'SYSTEMS', 'MATH', 'PHYSICS', 'CYBERSECURITY', 'ARCH'];
   const completedTodosCount = store.todos.filter((t) => t.completed).length;
   const selectedNode = store.topicNodes.find((n) => n.id === store.selectedTopicId);
+  const selectedNodeColor = selectedNode ? getCategoryShade(selectedNode.id, selectedNode.category) : '#00f0ff';
 
   const filteredTopics = store.topicNodes.filter((t) => {
     const categoryMatch = !store.selectedCategory || store.selectedCategory === 'ALL' || t.category === store.selectedCategory;
@@ -366,23 +396,30 @@ export default function TelemetryHUD() {
           )}
         </motion.div>
 
-        {/* Floating "SEE TOPIC" Action Button when a node is zoomed/selected but inspector is closed */}
+        {/* Floating "SEE TOPIC" Action Button on the Bottom Right of the Screen */}
         <AnimatePresence>
           {selectedNode && !store.isInspectorOpen && (
             <motion.div
-              initial={{ x: 50, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: 50, opacity: 0 }}
-              className="pointer-events-auto mr-4"
+              initial={{ y: 30, opacity: 0, scale: 0.9 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 30, opacity: 0, scale: 0.9 }}
+              className="pointer-events-auto fixed bottom-6 right-6 z-30"
             >
               <button
                 onClick={() => store.setIsInspectorOpen(true)}
-                className="glass-panel px-4 py-3 rounded-xl border border-[#00f0ff]/50 bg-[#080c16]/90 text-slate-100 font-mono text-xs font-bold tracking-wider hover:bg-[#00f0ff]/20 hover:border-[#00f0ff] hover:shadow-[0_0_22px_rgba(0,240,255,0.4)] transition-all flex items-center gap-2.5 shadow-2xl"
+                style={{
+                  borderColor: selectedNodeColor,
+                  boxShadow: `0 0 24px ${selectedNodeColor}50`,
+                  backgroundColor: 'rgba(8, 12, 22, 0.92)'
+                }}
+                className="px-5 py-3 rounded-xl border text-slate-100 font-mono text-xs font-bold tracking-wider hover:scale-105 transition-all flex items-center gap-3 backdrop-blur-md shadow-2xl cursor-pointer"
               >
-                <BookOpen size={16} className="text-[#00f0ff]" />
+                <BookOpen size={16} style={{ color: selectedNodeColor }} />
                 <span>SEE TOPIC:</span>
-                <span className="text-[#00f0ff] uppercase max-w-[200px] truncate">{selectedNode.name}</span>
-                <span className="text-xs text-[#00f0ff]">→</span>
+                <span className="uppercase font-extrabold" style={{ color: selectedNodeColor }}>
+                  {selectedNode.name}
+                </span>
+                <span className="text-sm font-bold" style={{ color: selectedNodeColor }}>→</span>
               </button>
             </motion.div>
           )}
