@@ -240,6 +240,8 @@ export default function TelemetryHUD() {
                     <button
                       key={cat}
                       onClick={() => store.setSelectedCategory(cat === 'ALL' ? null : cat)}
+                      onMouseEnter={() => store.setHoveredCategory(cat === 'ALL' ? null : cat)}
+                      onMouseLeave={() => store.setHoveredCategory(null)}
                       className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all border whitespace-nowrap flex-shrink-0 ${
                         isSelected
                           ? 'bg-[#00f0ff]/20 text-[#00f0ff] border-[#00f0ff] shadow-[0_0_10px_rgba(0,240,255,0.3)]'
