@@ -117,6 +117,19 @@ export default function TelemetryHUD() {
   const selectedNode = store.topicNodes.find((n) => n.id === store.selectedTopicId);
   const selectedNodeColor = selectedNode ? getCategoryShade(selectedNode.id, selectedNode.category) : '#00f0ff';
 
+  // Dynamic Mastery Score calculated per active Subgraph
+  const activeSubgraphNodes = store.selectedCategory && store.selectedCategory !== 'ALL'
+    ? store.topicNodes.filter((n) => n.category === store.selectedCategory)
+    : store.topicNodes;
+
+  const currentMasteryScore = Math.round(
+    activeSubgraphNodes.reduce((acc, curr) => acc + curr.mastery, 0) / (activeSubgraphNodes.length || 1)
+  );
+
+  const activeCategoryLabel = store.selectedCategory && store.selectedCategory !== 'ALL'
+    ? `${store.selectedCategory} MASTERY`
+    : 'MASTERY';
+
   const filteredTopics = store.topicNodes.filter((t) => {
     const categoryMatch = !store.selectedCategory || store.selectedCategory === 'ALL' || t.category === store.selectedCategory;
     const searchMatch = !store.searchQuery || t.name.toLowerCase().includes(store.searchQuery.toLowerCase());
@@ -607,12 +620,12 @@ export default function TelemetryHUD() {
 
       {/* ================= BOTTOM LEFT STUDY STATS ================= */}
       <footer className="pointer-events-auto flex items-center justify-start gap-3 mt-2">
-        {/* Mastery Box */}
+        {/* Mastery Box (Dynamic per Subgraph) */}
         <div className="glass-panel px-3.5 py-2 rounded-lg flex items-center gap-2 font-mono text-xs shadow-lg">
           <Award size={14} className="text-[#00ff9d]" />
-          <span className="text-slate-400">MASTERY:</span>
+          <span className="text-slate-400 uppercase">{activeCategoryLabel}:</span>
           <span className="text-[#00ff9d] font-bold">
-            {store.diagnostics.masteryScore}%
+            {currentMasteryScore}%
           </span>
         </div>
       </footer>
