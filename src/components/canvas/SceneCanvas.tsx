@@ -66,6 +66,16 @@ const getSingleLineFontSize = (len: number): string => {
   return 'text-[10.5px] tracking-wider';
 };
 
+// Controller inside Canvas to manage intro animation timing safely
+function IntroAnimationController({ introRef }: { introRef: React.MutableRefObject<number> }) {
+  useFrame((_, delta) => {
+    if (introRef.current < 1.0) {
+      introRef.current = Math.min(1.0, introRef.current + delta * 0.75);
+    }
+  });
+  return null;
+}
+
 // Custom Hook: Full Transitive Connected Component Graph Traversal (Direct vs Transitive Paths)
 const useConnectedGraph = () => {
   const topicNodes = useStore((state) => state.topicNodes);
@@ -940,12 +950,6 @@ export default function SceneCanvas() {
     introRef.current = 0;
   }, []);
 
-  useFrame((_, delta) => {
-    if (introRef.current < 1.0) {
-      introRef.current = Math.min(1.0, introRef.current + delta * 0.75);
-    }
-  });
-
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
@@ -988,6 +992,7 @@ export default function SceneCanvas() {
           zoomSpeed={0.9}
           screenSpacePanning
         />
+        <IntroAnimationController introRef={introRef} />
         <CameraRig controlsRef={controlsRef} />
         <ambientLight intensity={0.6} />
         <pointLight position={[15, 15, 15]} intensity={2.0} color="#00f0ff" />
