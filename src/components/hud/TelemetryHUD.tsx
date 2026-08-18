@@ -167,7 +167,15 @@ export default function TelemetryHUD() {
                   autoFocus
                   placeholder="Search 220+ concepts..."
                   value={store.searchQuery}
-                  onChange={(e) => store.setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    store.setSearchQuery(e.target.value);
+                    if (leftPanelCollapsed) {
+                      setLeftPanelCollapsed(false);
+                    }
+                    if (activeTab !== 'TOPICS') {
+                      setActiveTab('TOPICS');
+                    }
+                  }}
                   className="bg-transparent font-mono text-xs text-slate-100 placeholder-slate-500 focus:outline-none w-36 md:w-48"
                 />
                 <button
@@ -188,7 +196,11 @@ export default function TelemetryHUD() {
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.8, opacity: 0 }}
-                onClick={() => setIsSearchOpen(true)}
+                onClick={() => {
+                  setIsSearchOpen(true);
+                  setLeftPanelCollapsed(false);
+                  setActiveTab('TOPICS');
+                }}
                 className="p-1 text-slate-400 hover:text-[#00f0ff] transition-colors rounded flex items-center gap-1.5"
                 title="Open concept search"
               >
