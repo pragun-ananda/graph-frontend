@@ -70,7 +70,7 @@ const getSingleLineFontSize = (len: number): string => {
 function IntroAnimationController({ introRef }: { introRef: React.MutableRefObject<number> }) {
   useFrame((_, delta) => {
     if (introRef.current < 1.0) {
-      introRef.current = Math.min(1.0, introRef.current + delta * 0.55); // ~1.8s Hyper-Drive Arrival
+      introRef.current = Math.min(1.0, introRef.current + delta * 0.45); // ~2.2s Deep Space Long-Range Swoop
     }
   });
   return null;
@@ -868,13 +868,13 @@ function CameraRig({ controlsRef, introRef }: { controlsRef: React.RefObject<Orb
     const controls = controlsRef.current;
     if (!controls) return;
 
-    // 1. Deep Space Hyper-Drive Swoop Sequence on page load/refresh (Lands at z = 17.0 to fill center of page)
+    // 1. Deep Space Hyper-Drive Swoop Sequence on page load/refresh (Starts at z = 450.0 in deep space)
     if (introRef.current < 1.0) {
       const t = Math.min(1.0, introRef.current);
       const easedT = 1 - Math.pow(1 - t, 4); // Quartic Ease Out for hyper-drive deceleration
 
       const targetZ = selectedTopicId ? 17.0 : 17.0 / Math.max(0.3, zoomLevel);
-      const startZ = 175.0;
+      const startZ = 450.0;
       const currentZ = THREE.MathUtils.lerp(startZ, targetZ, easedT);
 
       camera.position.set(0, 0, currentZ);
@@ -965,7 +965,7 @@ export default function SceneCanvas() {
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
         onPointerMissed={() => setSelectedTopicId(null)}
       >
-        <PerspectiveCamera makeDefault position={[0, 0, 175.0]} fov={60} />
+        <PerspectiveCamera makeDefault position={[0, 0, 450.0]} fov={60} far={2000} />
         <OrbitControls
           makeDefault
           ref={controlsRef}
