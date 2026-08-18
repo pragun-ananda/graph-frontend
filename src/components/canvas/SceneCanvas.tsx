@@ -66,11 +66,11 @@ const getSingleLineFontSize = (len: number): string => {
   return 'text-[10.5px] tracking-wider';
 };
 
-// Controller inside Canvas to manage intro animation timing safely
+// Controller inside Canvas to manage Deep Space Fly-In intro animation timing safely
 function IntroAnimationController({ introRef }: { introRef: React.MutableRefObject<number> }) {
   useFrame((_, delta) => {
     if (introRef.current < 1.0) {
-      introRef.current = Math.min(1.0, introRef.current + delta * 0.75);
+      introRef.current = Math.min(1.0, introRef.current + delta * 0.55); // ~1.8s Hyper-Drive Arrival
     }
   });
   return null;
@@ -205,18 +205,14 @@ const SolarWindShaderMaterial = {
     varying float vAlpha;
 
     void main() {
-      // Lerp edge start and end positions during Big Bang explosion intro
-      vec3 easedStart = aStart * uIntroProgress;
-      vec3 easedEnd = aEnd * uIntroProgress;
-
       // Lerp progress along directed prerequisite vector (A -> B)
       float progress = fract(uTime * aSpeed + aOffset);
-      vec3 currentPos = mix(easedStart, easedEnd, progress);
+      vec3 currentPos = mix(aStart, aEnd, progress);
 
       vColor = aColor;
 
-      // Soft parabolic alpha fade with intro explosion fade-in
-      float introAlpha = smoothstep(0.2, 0.9, uIntroProgress);
+      // Soft parabolic alpha fade with hyper-drive fly-in fade
+      float introAlpha = smoothstep(0.2, 0.85, uIntroProgress);
       vAlpha = sin(progress * 3.14159265) * introAlpha;
 
       vec4 mvPosition = modelViewMatrix * vec4(currentPos, 1.0);
@@ -649,9 +645,8 @@ function DeepSpaceStarfield() {
 
 const sharedSphereGeometry = new THREE.SphereGeometry(0.38, 16, 16);
 
-// Interactive Knowledge Node Component with Big Bang Explosion Ignition Animation
+// Interactive Knowledge Node Component with Tier-by-Tier Starlight Ignition on Camera Arrival
 const KnowledgeNode = React.memo(({ node, introRef }: { node: TopicNode; introRef: React.MutableRefObject<number> }) => {
-  const groupRef = useRef<THREE.Group>(null!);
   const meshRef = useRef<THREE.Mesh>(null!);
   const ringRef = useRef<THREE.Mesh>(null!);
 
@@ -677,25 +672,23 @@ const KnowledgeNode = React.memo(({ node, introRef }: { node: TopicNode; introRe
     return getCategoryShade(node.id, node.category);
   }, [node.id, node.category, isCategoryMatched, isSearchMatched]);
 
+  const radius = useMemo(() => {
+    const [x, y, z] = node.coordinates;
+    return Math.sqrt(x * x + y * y + z * z);
+  }, [node.coordinates]);
+
   useFrame((_, delta) => {
-    // 1. Big Bang Explosion Position Lerp
-    const t = Math.min(1.0, introRef.current);
-    const easedT = 1 - Math.pow(1 - t, 3); // Cubic Ease Out
-
-    if (groupRef.current) {
-      groupRef.current.position.set(
-        node.coordinates[0] * easedT,
-        node.coordinates[1] * easedT,
-        node.coordinates[2] * easedT
-      );
-    }
-
-    // 2. Orbital Ring & Node Scale Lerp
     if (ringRef.current) {
       ringRef.current.rotation.z += delta * 1.5;
     }
     if (meshRef.current) {
-      const targetScale = isSelected ? 1.8 : isHovered ? 1.4 : isConnectedComponent ? 1.15 : 1.0;
+      const tierDelay = (radius / 35.0) * 0.45;
+      const ignitionProgress = Math.max(0, Math.min(1.0, (introRef.current - tierDelay) / 0.35));
+      const easedIgnition = 1 - Math.pow(1 - ignitionProgress, 3);
+
+      const baseScale = isSelected ? 1.8 : isHovered ? 1.4 : isConnectedComponent ? 1.15 : 1.0;
+      const targetScale = baseScale * easedIgnition;
+
       meshRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), delta * 6.0);
     }
   });
@@ -705,12 +698,16 @@ const KnowledgeNode = React.memo(({ node, introRef }: { node: TopicNode; introRe
     setSelectedTopicId(node.id);
   };
 
-  const glintScale = isSelected ? 1.6 : isHovered ? 1.1 : isConnectedComponent ? 0.72 : 0.38;
-  const glintOpacity = isSelected ? 0.95 : isHovered ? 0.75 : isConnectedComponent ? 0.52 : 0.22;
-  const emissiveVal = isSelected ? 2.4 : isHovered ? 1.4 : isConnectedComponent ? 0.95 : 0.55;
+  const tierDelay = (radius / 35.0) * 0.45;
+  const ignitionProgress = Math.max(0, Math.min(1.0, (introRef.current - tierDelay) / 0.35));
+  const easedIgnition = 1 - Math.pow(1 - ignitionProgress, 3);
+
+  const glintScale = (isSelected ? 1.6 : isHovered ? 1.1 : isConnectedComponent ? 0.72 : 0.38) * easedIgnition;
+  const glintOpacity = (isSelected ? 0.95 : isHovered ? 0.75 : isConnectedComponent ? 0.52 : 0.22) * easedIgnition;
+  const emissiveVal = (isSelected ? 2.4 : isHovered ? 1.4 : isConnectedComponent ? 0.95 : 0.55) * (0.4 + easedIgnition * 0.6);
 
   return (
-    <group ref={groupRef} position={[0, 0, 0]}>
+    <group position={node.coordinates}>
       {/* 4-Point Starlight Flare matched to node's category shade */}
       <AnamorphicStarGlint
         color={nodeColor}
@@ -739,8 +736,8 @@ const KnowledgeNode = React.memo(({ node, introRef }: { node: TopicNode; introRe
           emissiveIntensity={emissiveVal}
           roughness={0.2}
           metalness={0.8}
-          transparent={!isCategoryMatched || !isSearchMatched}
-          opacity={!isCategoryMatched || !isSearchMatched ? 0.2 : 1.0}
+          transparent={!isCategoryMatched || !isSearchMatched || easedIgnition < 0.99}
+          opacity={!isCategoryMatched || !isSearchMatched ? 0.2 : easedIgnition}
         />
       </mesh>
 
@@ -748,12 +745,12 @@ const KnowledgeNode = React.memo(({ node, introRef }: { node: TopicNode; introRe
       {(isSelected || isHovered) && (
         <mesh ref={ringRef} frustumCulled={false}>
           <ringGeometry args={[0.5, 0.62, 24]} />
-          <meshBasicMaterial color={nodeColor} side={THREE.DoubleSide} transparent opacity={0.85} />
+          <meshBasicMaterial color={nodeColor} side={THREE.DoubleSide} transparent opacity={0.85 * easedIgnition} />
         </mesh>
       )}
 
       {/* Well-Sized Single-Line HTML Label Tag (Never wraps, never cuts off) */}
-      {showLabel && (
+      {showLabel && easedIgnition > 0.5 && (
         <Html
           position={[0, 0.65, 0]}
           center
@@ -788,7 +785,7 @@ const KnowledgeNode = React.memo(({ node, introRef }: { node: TopicNode; introRe
   );
 });
 
-// Render 3D Directed Prerequisite & Unlocked Edges (GPU Group scale lerp during intro)
+// Render 3D Directed Prerequisite & Unlocked Edges (Fade in as camera arrives)
 function KnowledgeGraphEdges({ introRef }: { introRef: React.MutableRefObject<number> }) {
   const groupRef = useRef<THREE.Group>(null!);
   const topicNodes = useStore((state) => state.topicNodes);
@@ -859,7 +856,7 @@ function KnowledgeGraphEdges({ introRef }: { introRef: React.MutableRefObject<nu
     const t = Math.min(1.0, introRef.current);
     const easedT = 1 - Math.pow(1 - t, 3);
     if (groupRef.current) {
-      groupRef.current.scale.set(easedT, easedT, easedT);
+      groupRef.current.scale.setScalar(0.2 + 0.8 * easedT);
     }
   });
 
@@ -879,8 +876,8 @@ function KnowledgeGraphEdges({ introRef }: { introRef: React.MutableRefObject<nu
   );
 }
 
-// Camera Rig: Smooth cinematic lerp for node zoom-in and homepage full-graph overview
-function CameraRig({ controlsRef }: { controlsRef: React.RefObject<OrbitControlsImpl> }) {
+// Camera Rig: Deep Space Hyper-Drive Fly-In Swoop (z = 165.0 -> 52.0) and cinematic node zoom
+function CameraRig({ controlsRef, introRef }: { controlsRef: React.RefObject<OrbitControlsImpl>; introRef: React.MutableRefObject<number> }) {
   const { camera } = useThree();
   const topicNodes = useStore((state) => state.topicNodes);
   const selectedTopicId = useStore((state) => state.selectedTopicId);
@@ -900,6 +897,22 @@ function CameraRig({ controlsRef }: { controlsRef: React.RefObject<OrbitControls
     const controls = controlsRef.current;
     if (!controls) return;
 
+    // 1. Deep Space Hyper-Drive Swoop Sequence on page load/refresh
+    if (introRef.current < 1.0) {
+      const t = Math.min(1.0, introRef.current);
+      const easedT = 1 - Math.pow(1 - t, 4); // Quartic Ease Out for hyper-drive deceleration
+
+      const targetZ = selectedTopicId ? 52.0 : 52.0 / Math.max(0.3, zoomLevel);
+      const startZ = 165.0;
+      const currentZ = THREE.MathUtils.lerp(startZ, targetZ, easedT);
+
+      camera.position.set(0, 0, currentZ);
+      controls.target.set(0, 0, 0);
+      controls.update();
+      return;
+    }
+
+    // 2. Interactive Selection lerp
     if (isAnimating.current) {
       const selectedNode = topicNodes.find((n) => n.id === selectedTopicId);
 
@@ -981,7 +994,7 @@ export default function SceneCanvas() {
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
         onPointerMissed={() => setSelectedTopicId(null)}
       >
-        <PerspectiveCamera makeDefault position={[0, 0, 52.0]} fov={60} />
+        <PerspectiveCamera makeDefault position={[0, 0, 165.0]} fov={60} />
         <OrbitControls
           makeDefault
           ref={controlsRef}
@@ -993,7 +1006,7 @@ export default function SceneCanvas() {
           screenSpacePanning
         />
         <IntroAnimationController introRef={introRef} />
-        <CameraRig controlsRef={controlsRef} />
+        <CameraRig controlsRef={controlsRef} introRef={introRef} />
         <ambientLight intensity={0.6} />
         <pointLight position={[15, 15, 15]} intensity={2.0} color="#00f0ff" />
         <pointLight position={[-15, -15, -15]} intensity={1.5} color="#00ff9d" />
