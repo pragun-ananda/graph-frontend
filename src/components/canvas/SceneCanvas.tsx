@@ -7,25 +7,29 @@ import { useStore } from '../../store/useStore';
 import { TopicNode } from '../../types/telemetry';
 import PostProcessing from './PostProcessing';
 
-// Get domain category spectral color for vibrant galaxy clusters
-const getCategoryColor = (category: string, status?: string): string => {
-  switch (category) {
-    case 'AI & ML': return '#00f0ff';       // Electric Cyan
-    case 'CS': return '#ff007f';            // Hot Pink / Magenta
-    case 'SYSTEMS': return '#a855f7';       // Cosmic Purple / Violet
-    case 'MATH': return '#ffe600';          // Solar Electric Yellow
-    case 'PHYSICS': return '#00ff9d';       // Matrix Emerald
-    case 'CYBERSECURITY': return '#ff3366'; // Vivid Coral Crimson
-    case 'ARCH': return '#3b82f6';         // Deep Galactic Blue
-    default:
-      switch (status) {
-        case 'MASTERED': return '#00ff9d';
-        case 'LEARNING': return '#00f0ff';
-        case 'DUE': return '#ffaa00';
-        case 'NEW': return '#ff3366';
-        default: return '#a855f7';
-      }
+// Expanded 10-Color Spectral Neon Palette
+const NEON_PALETTE = [
+  '#00f0ff', // Electric Cyan
+  '#ff007f', // Hot Pink / Magenta
+  '#a855f7', // Cosmic Purple / Violet
+  '#ffe600', // Solar Electric Yellow
+  '#00ff9d', // Matrix Emerald
+  '#ff3366', // Vivid Crimson
+  '#3b82f6', // Deep Electric Blue
+  '#ff7700', // Neon Warm Orange
+  '#e040fb', // Neon Orchid Pink
+  '#00e5ff'  // Bright Electric Aqua
+];
+
+// Deterministically pick a random neon color per node ID
+const getNodeRandomColor = (id: string): string => {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash << 5) - hash + id.charCodeAt(i);
+    hash |= 0;
   }
+  const index = Math.abs(hash) % NEON_PALETTE.length;
+  return NEON_PALETTE[index];
 };
 
 // Shader for Solar Wind Edge Energy Flow Particles
@@ -102,13 +106,13 @@ function SolarWindEnergyStreams() {
     const amber = new THREE.Color('#ffaa00');
 
     topicNodes.forEach((source) => {
-      const sourceColorHex = getCategoryColor(source.category, source.status);
+      const sourceColorHex = getNodeRandomColor(source.id);
       const sourceColor = new THREE.Color(sourceColorHex);
 
       source.unlocks.forEach((targetId) => {
         const target = nodeMap.get(targetId);
         if (target) {
-          const targetColorHex = getCategoryColor(target.category, target.status);
+          const targetColorHex = getNodeRandomColor(target.id);
           const targetColor = new THREE.Color(targetColorHex);
           const photonsPerEdge = 3;
 
@@ -548,7 +552,7 @@ function SynapseParticleCloud() {
 
 const sharedSphereGeometry = new THREE.SphereGeometry(0.38, 16, 16);
 
-// Interactive Knowledge Node Component with Expanded Domain Spectral Palette
+// Interactive Knowledge Node Component with Random Spectral Colors
 const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
   const meshRef = useRef<THREE.Mesh>(null!);
   const ringRef = useRef<THREE.Mesh>(null!);
@@ -569,8 +573,8 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
 
   const nodeColor = useMemo(() => {
     if (!isCategoryMatched || !isSearchMatched) return '#334155';
-    return getCategoryColor(node.category, node.status);
-  }, [node.category, node.status, isCategoryMatched, isSearchMatched]);
+    return getNodeRandomColor(node.id);
+  }, [node.id, isCategoryMatched, isSearchMatched]);
 
   useFrame((_, delta) => {
     if (ringRef.current) {
@@ -589,7 +593,7 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
 
   return (
     <group position={node.coordinates}>
-      {/* Anamorphic 4-Point Starlight Flare matched to node's exact category/status color */}
+      {/* Anamorphic 4-Point Starlight Flare matched to node's random color */}
       {(isSelected || isHovered) && (
         <AnamorphicStarGlint
           color={nodeColor}
@@ -623,7 +627,7 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
         />
       </mesh>
 
-      {/* Orbital ring matched to node's exact spectral color */}
+      {/* Orbital ring matched to node's random color */}
       {(isSelected || isHovered) && (
         <mesh ref={ringRef} frustumCulled={false}>
           <ringGeometry args={[0.5, 0.62, 24]} />
