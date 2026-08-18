@@ -585,7 +585,7 @@ function SynapseParticleCloud() {
 
 const sharedSphereGeometry = new THREE.SphereGeometry(0.38, 16, 16);
 
-// Interactive Knowledge Node Component with Distinct Subgraph Shades
+// Interactive Knowledge Node Component with Dynamic Auto-Resizing Font Size
 const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
   const meshRef = useRef<THREE.Mesh>(null!);
   const ringRef = useRef<THREE.Mesh>(null!);
@@ -671,7 +671,7 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
         </mesh>
       )}
 
-      {/* Bounded HTML Label Tag */}
+      {/* Dynamic Auto-Resizing HTML Label Tag (Never cuts off title) */}
       {showLabel && (
         <Html
           position={[0, 0.65, 0]}
@@ -691,7 +691,13 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
                 ? `0 0 12px ${nodeColor}`
                 : undefined
             }}
-            className={`px-2.5 py-1 rounded text-[11px] font-mono font-bold uppercase tracking-wider border whitespace-nowrap transition-all duration-200 max-w-[260px] truncate ${
+            className={`px-3 py-1.5 rounded font-mono font-bold uppercase tracking-wider border transition-all duration-200 max-w-[320px] text-center leading-snug whitespace-normal ${
+              node.name.length > 30
+                ? 'text-[8.5px]'
+                : node.name.length > 20
+                ? 'text-[9.5px]'
+                : 'text-[11px]'
+            } ${
               isSelected
                 ? 'text-slate-950 scale-105'
                 : isHovered
@@ -699,7 +705,7 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
                 : 'bg-[#080c16]/85 text-slate-200 border-white/10 backdrop-blur-md opacity-90 hover:border-[#00f0ff]'
             }`}
           >
-            <span className="truncate">{node.name}</span>
+            <span>{node.name}</span>
           </div>
         </Html>
       )}
