@@ -66,6 +66,83 @@ const getSingleLineFontSize = (len: number): string => {
   return 'text-[11px]';
 };
 
+// Shader for Soft Radial Galactic Core Glow
+const GalacticCoreGlowMaterial = {
+  uniforms: {
+    uTime: { value: 0 },
+    uColorCore: { value: new THREE.Color('#ffc107') },  // Solar gold core
+    uColorInner: { value: new THREE.Color('#00f0ff') }, // Cyan inner halo
+    uColorOuter: { value: new THREE.Color('#4c1d95') }  // Deep cosmic violet outer halo
+  },
+  vertexShader: `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform float uTime;
+    uniform vec3 uColorCore;
+    uniform vec3 uColorInner;
+    uniform vec3 uColorOuter;
+    varying vec2 vUv;
+
+    void main() {
+      vec2 st = vUv - vec2(0.5);
+      float r = length(st) * 2.0;
+
+      if (r >= 1.0) discard;
+
+      // Soft parabolic & exponential falloff
+      float coreGlow = smoothstep(1.0, 0.0, r);
+      float intenseCore = pow(coreGlow, 3.2);
+      float outerGlow = pow(coreGlow, 1.6);
+
+      // Gentle breathing pulse
+      float pulse = sin(uTime * 0.8) * 0.08 + 0.92;
+
+      // Color gradient from central gold -> inner cyan -> outer deep violet
+      vec3 color = mix(uColorOuter, uColorInner, smoothstep(0.8, 0.25, r));
+      color = mix(color, uColorCore, intenseCore * 0.85);
+
+      float alpha = outerGlow * 0.35 * pulse;
+
+      gl_FragColor = vec4(color * 1.5, alpha);
+    }
+  `
+};
+
+function GalacticCoreGlow() {
+  const meshRef = useRef<THREE.Mesh>(null!);
+  const materialRef = useRef<THREE.ShaderMaterial>(null!);
+
+  useFrame((state, delta) => {
+    if (materialRef.current) {
+      materialRef.current.uniforms.uTime.value += delta;
+    }
+    if (meshRef.current) {
+      meshRef.current.quaternion.copy(state.camera.quaternion); // Always face camera (billboard)
+    }
+  });
+
+  const material = useMemo(() => {
+    return new THREE.ShaderMaterial({
+      ...GalacticCoreGlowMaterial,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    });
+  }, []);
+
+  return (
+    <mesh ref={meshRef} position={[0, 0, -2.5]} scale={[42, 42, 1]} frustumCulled={false}>
+      <planeGeometry args={[1, 1]} />
+      <primitive object={material} ref={materialRef} attach="material" />
+    </mesh>
+  );
+}
+
 // Shader for Solar Wind Edge Energy Flow Particles
 const SolarWindShaderMaterial = {
   uniforms: {
@@ -469,129 +546,6 @@ function DeepSpaceStarfield() {
   );
 }
 
-// Shader for 3D Synapse Cloud
-const ParticleShaderMaterial = {
-  uniforms: {
-    uTime: { value: 0 },
-    uMouse: { value: new THREE.Vector2(0, 0) },
-    uBass: { value: 0 },
-    uColorCyan: { value: new THREE.Color('#00f0ff') },
-    uColorEmerald: { value: new THREE.Color('#00ff9d') }
-  },
-  vertexShader: `
-    uniform float uTime;
-    uniform vec2 uMouse;
-    uniform float uBass;
-    
-    attribute float aScale;
-
-    varying vec3 vPosition;
-    varying float vDistance;
-
-    void main() {
-      vPosition = position;
-      vec3 pos = position;
-
-      float displacement = sin(pos.x * 1.2 + uTime * 1.0) * cos(pos.y * 1.2 + uTime * 0.8) * sin(pos.z * 1.2 + uTime);
-      pos += normal * displacement * (0.25 + uBass * 0.4);
-
-      vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
-      gl_Position = projectionMatrix * mvPosition;
-
-      gl_PointSize = (8.0 * aScale + uBass * 5.0) * (1.0 / -mvPosition.z);
-      vDistance = length(pos);
-    }
-  `,
-  fragmentShader: `
-    uniform float uTime;
-    uniform vec3 uColorCyan;
-    uniform vec3 uColorEmerald;
-
-    varying vec3 vPosition;
-    varying float vDistance;
-
-    void main() {
-      float dist = length(gl_PointCoord - vec2(0.5));
-      if (dist > 0.5) discard;
-
-      float alpha = smoothstep(0.5, 0.0, dist);
-      vec3 finalColor = mix(uColorCyan, uColorEmerald, sin(vDistance * 0.3 + uTime) * 0.5 + 0.5);
-
-      gl_FragColor = vec4(finalColor, alpha * 0.65);
-    }
-  `
-};
-
-function SynapseParticleCloud() {
-  const pointsRef = useRef<THREE.Points>(null!);
-  const materialRef = useRef<THREE.ShaderMaterial>(null!);
-
-  const particleDensity = useStore((state) => state.particleDensity);
-
-  const { positions, scales } = useMemo(() => {
-    const count = particleDensity;
-    const pos = new Float32Array(count * 3);
-    const scl = new Float32Array(count);
-
-    for (let i = 0; i < count; i++) {
-      const u = Math.random();
-      const v = Math.random();
-      const theta = u * 2.0 * Math.PI;
-      const phi = Math.acos(2.0 * v - 1.0);
-      const r = Math.cbrt(Math.random()) * 22.0;
-
-      pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-      pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-      pos[i * 3 + 2] = r * Math.cos(phi);
-
-      scl[i] = Math.random() * 0.8 + 0.2;
-    }
-
-    return { positions: pos, scales: scl };
-  }, [particleDensity]);
-
-  useFrame((_, delta) => {
-    const store = useStore.getState();
-    const material = materialRef.current;
-    if (!material || !pointsRef.current) return;
-
-    material.uniforms.uTime.value += delta;
-    material.uniforms.uMouse.value.set(
-      store.mousePosition.normalizedX,
-      store.mousePosition.normalizedY
-    );
-    material.uniforms.uBass.value = store.audioData.bass;
-
-    pointsRef.current.rotation.y += delta * (0.02 + store.audioData.bass * 0.05);
-  });
-
-  return (
-    <points ref={pointsRef} frustumCulled={false}>
-      <bufferGeometry>
-        <bufferAttribute
-          attach="attributes-position"
-          count={positions.length / 3}
-          array={positions}
-          itemSize={3}
-        />
-        <bufferAttribute
-          attach="attributes-aScale"
-          count={scales.length}
-          array={scales}
-          itemSize={1}
-        />
-      </bufferGeometry>
-      <shaderMaterial
-        ref={materialRef}
-        args={[ParticleShaderMaterial]}
-        transparent
-        depthWrite={false}
-        blending={THREE.AdditiveBlending}
-      />
-    </points>
-  );
-}
-
 const sharedSphereGeometry = new THREE.SphereGeometry(0.38, 16, 16);
 
 // Interactive Knowledge Node Component with Well-Sized Single-Line Font Scaling
@@ -700,7 +654,7 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
                 ? `0 0 12px ${nodeColor}`
                 : undefined
             }}
-            className={`px-3 py-1 rounded font-mono font-bold uppercase tracking-wider border whitespace-nowrap transition-all duration-200 ${getSingleLineFontSize(node.name.length)} ${
+            className={`px-3 py-1 rounded font-mono font-bold uppercase tracking-wider border transition-all duration-200 whitespace-nowrap ${getSingleLineFontSize(node.name.length)} ${
               isSelected
                 ? 'text-slate-950 scale-105'
                 : isHovered
@@ -919,6 +873,9 @@ export default function SceneCanvas() {
         
         {/* Deep Space Background Distant Starfield Layer */}
         <DeepSpaceStarfield />
+
+        {/* Soft Radial Galactic Core Glow at Geometric Center */}
+        <GalacticCoreGlow />
 
         <KnowledgeGraphEdges />
 
