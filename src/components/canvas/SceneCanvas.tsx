@@ -57,6 +57,15 @@ const getOutgoingEdgeColor = (activeColorHex: string): string => {
   return '#' + outgoing.getHexString();
 };
 
+// Calculate dynamic single-line font size to fit title perfectly without wrapping
+const getSingleLineFontSize = (len: number): string => {
+  if (len > 40) return 'text-[7.5px]';
+  if (len > 32) return 'text-[8.5px]';
+  if (len > 24) return 'text-[9.5px]';
+  if (len > 16) return 'text-[10px]';
+  return 'text-[11px]';
+};
+
 // Shader for Solar Wind Edge Energy Flow Particles
 const SolarWindShaderMaterial = {
   uniforms: {
@@ -585,7 +594,7 @@ function SynapseParticleCloud() {
 
 const sharedSphereGeometry = new THREE.SphereGeometry(0.38, 16, 16);
 
-// Interactive Knowledge Node Component with Dynamic Auto-Resizing Font Size
+// Interactive Knowledge Node Component with Well-Sized Single-Line Font Scaling
 const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
   const meshRef = useRef<THREE.Mesh>(null!);
   const ringRef = useRef<THREE.Mesh>(null!);
@@ -671,7 +680,7 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
         </mesh>
       )}
 
-      {/* Dynamic Auto-Resizing HTML Label Tag (Never cuts off title) */}
+      {/* Well-Sized Single-Line HTML Label Tag (Never wraps, never cuts off) */}
       {showLabel && (
         <Html
           position={[0, 0.65, 0]}
@@ -691,13 +700,7 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
                 ? `0 0 12px ${nodeColor}`
                 : undefined
             }}
-            className={`px-3 py-1.5 rounded font-mono font-bold uppercase tracking-wider border transition-all duration-200 max-w-[320px] text-center leading-snug whitespace-normal ${
-              node.name.length > 30
-                ? 'text-[8.5px]'
-                : node.name.length > 20
-                ? 'text-[9.5px]'
-                : 'text-[11px]'
-            } ${
+            className={`px-3 py-1 rounded font-mono font-bold uppercase tracking-wider border whitespace-nowrap transition-all duration-200 ${getSingleLineFontSize(node.name.length)} ${
               isSelected
                 ? 'text-slate-950 scale-105'
                 : isHovered
