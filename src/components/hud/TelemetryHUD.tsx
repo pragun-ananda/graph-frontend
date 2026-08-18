@@ -567,33 +567,8 @@ export default function TelemetryHUD() {
         </AnimatePresence>
       </main>
 
-      {/* ================= BOTTOM LEFT STUDY STATS & FOCUS TIMER ================= */}
+      {/* ================= BOTTOM LEFT STUDY STATS ================= */}
       <footer className="pointer-events-auto flex items-center justify-start gap-3 mt-2">
-        {/* Focus Timer Box */}
-        <div className="glass-panel px-3.5 py-2 rounded-lg flex items-center gap-3 font-mono text-xs shadow-lg">
-          <Clock size={15} className="text-[#00f0ff]" />
-          <div className="flex items-center gap-2">
-            <span className="text-slate-400 uppercase">{store.pomodoro.mode}:</span>
-            <span className="text-[#00f0ff] font-bold text-sm tracking-wider">
-              {formatTimer(store.pomodoro.timeLeft)}
-            </span>
-          </div>
-          <button
-            onClick={() => store.togglePomodoro()}
-            className="p-1 rounded hover:bg-white/10 text-slate-200 hover:text-[#00f0ff] transition-colors"
-            title={store.pomodoro.isRunning ? 'Pause Timer' : 'Start Focus Timer'}
-          >
-            {store.pomodoro.isRunning ? <Pause size={14} /> : <Play size={14} />}
-          </button>
-          <button
-            onClick={() => store.resetPomodoro()}
-            className="p-1 rounded hover:bg-white/10 text-slate-400 hover:text-slate-200 transition-colors"
-            title="Reset Timer"
-          >
-            <RotateCcw size={13} />
-          </button>
-        </div>
-
         {/* Mastery Box */}
         <div className="glass-panel px-3.5 py-2 rounded-lg flex items-center gap-2 font-mono text-xs shadow-lg">
           <Award size={14} className="text-[#00ff9d]" />
