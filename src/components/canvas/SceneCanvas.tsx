@@ -66,83 +66,6 @@ const getSingleLineFontSize = (len: number): string => {
   return 'text-[11px]';
 };
 
-// Shader for Soft Radial Galactic Core Glow
-const GalacticCoreGlowMaterial = {
-  uniforms: {
-    uTime: { value: 0 },
-    uColorCore: { value: new THREE.Color('#ffc107') },  // Solar gold core
-    uColorInner: { value: new THREE.Color('#00f0ff') }, // Cyan inner halo
-    uColorOuter: { value: new THREE.Color('#4c1d95') }  // Deep cosmic violet outer halo
-  },
-  vertexShader: `
-    varying vec2 vUv;
-    void main() {
-      vUv = uv;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    }
-  `,
-  fragmentShader: `
-    uniform float uTime;
-    uniform vec3 uColorCore;
-    uniform vec3 uColorInner;
-    uniform vec3 uColorOuter;
-    varying vec2 vUv;
-
-    void main() {
-      vec2 st = vUv - vec2(0.5);
-      float r = length(st) * 2.0;
-
-      if (r >= 1.0) discard;
-
-      // Soft parabolic & exponential falloff
-      float coreGlow = smoothstep(1.0, 0.0, r);
-      float intenseCore = pow(coreGlow, 3.2);
-      float outerGlow = pow(coreGlow, 1.6);
-
-      // Gentle breathing pulse
-      float pulse = sin(uTime * 0.8) * 0.08 + 0.92;
-
-      // Color gradient from central gold -> inner cyan -> outer deep violet
-      vec3 color = mix(uColorOuter, uColorInner, smoothstep(0.8, 0.25, r));
-      color = mix(color, uColorCore, intenseCore * 0.85);
-
-      float alpha = outerGlow * 0.35 * pulse;
-
-      gl_FragColor = vec4(color * 1.5, alpha);
-    }
-  `
-};
-
-function GalacticCoreGlow() {
-  const meshRef = useRef<THREE.Mesh>(null!);
-  const materialRef = useRef<THREE.ShaderMaterial>(null!);
-
-  useFrame((state, delta) => {
-    if (materialRef.current) {
-      materialRef.current.uniforms.uTime.value += delta;
-    }
-    if (meshRef.current) {
-      meshRef.current.quaternion.copy(state.camera.quaternion); // Always face camera (billboard)
-    }
-  });
-
-  const material = useMemo(() => {
-    return new THREE.ShaderMaterial({
-      ...GalacticCoreGlowMaterial,
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending
-    });
-  }, []);
-
-  return (
-    <mesh ref={meshRef} position={[0, 0, -2.5]} scale={[42, 42, 1]} frustumCulled={false}>
-      <planeGeometry args={[1, 1]} />
-      <primitive object={material} ref={materialRef} attach="material" />
-    </mesh>
-  );
-}
-
 // Shader for Solar Wind Edge Energy Flow Particles
 const SolarWindShaderMaterial = {
   uniforms: {
@@ -456,31 +379,29 @@ const DeepSpaceShaderMaterial = {
   `
 };
 
+// 3-Tier Parallax Starfield Depth Component (Far, Mid, Foreground differential motion)
 function DeepSpaceStarfield() {
-  const pointsRef = useRef<THREE.Points>(null!);
+  const farRef = useRef<THREE.Points>(null!);
+  const midRef = useRef<THREE.Points>(null!);
+  const foreRef = useRef<THREE.Points>(null!);
   const materialRef = useRef<THREE.ShaderMaterial>(null!);
 
-  const { positions, colors, sizes, phases } = useMemo(() => {
-    const count = 4800;
+  // Tier 1: Far Background Stars (r = 90 - 140)
+  const farData = useMemo(() => {
+    const count = 3600;
     const pos = new Float32Array(count * 3);
     const col = new Float32Array(count * 3);
     const sz = new Float32Array(count);
     const ph = new Float32Array(count);
 
-    const palette = [
-      new THREE.Color('#ffffff'), // Pure brilliant white
-      new THREE.Color('#ffffff'),
-      new THREE.Color('#fff4d6'), // Soft solar yellow
-      new THREE.Color('#ffe8a3'), // Golden yellow star
-      new THREE.Color('#f4f8ff')  // Subtle white-blue star
-    ];
+    const palette = [new THREE.Color('#ffffff'), new THREE.Color('#fff4d6'), new THREE.Color('#ffe8a3')];
 
     for (let i = 0; i < count; i++) {
       const u = Math.random();
       const v = Math.random();
       const theta = u * 2.0 * Math.PI;
       const phi = Math.acos(2.0 * v - 1.0);
-      const r = 70.0 + Math.random() * 50.0;
+      const r = 90.0 + Math.random() * 50.0;
 
       pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
       pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
@@ -491,10 +412,73 @@ function DeepSpaceStarfield() {
       col[i * 3 + 1] = color.g;
       col[i * 3 + 2] = color.b;
 
-      sz[i] = Math.random() * 0.9 + 0.35;
+      sz[i] = Math.random() * 0.5 + 0.25;
       ph[i] = Math.random() * Math.PI * 2;
     }
+    return { positions: pos, colors: col, sizes: sz, phases: ph };
+  }, []);
 
+  // Tier 2: Mid-Ground Twinkling Stars (r = 45 - 85)
+  const midData = useMemo(() => {
+    const count = 1800;
+    const pos = new Float32Array(count * 3);
+    const col = new Float32Array(count * 3);
+    const sz = new Float32Array(count);
+    const ph = new Float32Array(count);
+
+    const palette = [new THREE.Color('#ffffff'), new THREE.Color('#fff4d6'), new THREE.Color('#00f0ff'), new THREE.Color('#ffe600')];
+
+    for (let i = 0; i < count; i++) {
+      const u = Math.random();
+      const v = Math.random();
+      const theta = u * 2.0 * Math.PI;
+      const phi = Math.acos(2.0 * v - 1.0);
+      const r = 45.0 + Math.random() * 40.0;
+
+      pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      pos[i * 3 + 2] = r * Math.cos(phi);
+
+      const color = palette[Math.floor(Math.random() * palette.length)];
+      col[i * 3] = color.r;
+      col[i * 3 + 1] = color.g;
+      col[i * 3 + 2] = color.b;
+
+      sz[i] = Math.random() * 0.7 + 0.45;
+      ph[i] = Math.random() * Math.PI * 2;
+    }
+    return { positions: pos, colors: col, sizes: sz, phases: ph };
+  }, []);
+
+  // Tier 3: Foreground Ambient Micro-Dust Stars (r = 18 - 40)
+  const foreData = useMemo(() => {
+    const count = 600;
+    const pos = new Float32Array(count * 3);
+    const col = new Float32Array(count * 3);
+    const sz = new Float32Array(count);
+    const ph = new Float32Array(count);
+
+    const palette = [new THREE.Color('#ffffff'), new THREE.Color('#fff4d6'), new THREE.Color('#a855f7')];
+
+    for (let i = 0; i < count; i++) {
+      const u = Math.random();
+      const v = Math.random();
+      const theta = u * 2.0 * Math.PI;
+      const phi = Math.acos(2.0 * v - 1.0);
+      const r = 18.0 + Math.random() * 22.0;
+
+      pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      pos[i * 3 + 2] = r * Math.cos(phi);
+
+      const color = palette[Math.floor(Math.random() * palette.length)];
+      col[i * 3] = color.r;
+      col[i * 3 + 1] = color.g;
+      col[i * 3 + 2] = color.b;
+
+      sz[i] = Math.random() * 0.9 + 0.6;
+      ph[i] = Math.random() * Math.PI * 2;
+    }
     return { positions: pos, colors: col, sizes: sz, phases: ph };
   }, []);
 
@@ -502,47 +486,47 @@ function DeepSpaceStarfield() {
     if (materialRef.current) {
       materialRef.current.uniforms.uTime.value += delta;
     }
-    if (pointsRef.current) {
-      pointsRef.current.rotation.y += delta * 0.004;
-    }
+    // 3-Tier Parallax Differential Motion
+    if (farRef.current) farRef.current.rotation.y += delta * 0.002;
+    if (midRef.current) midRef.current.rotation.y += delta * 0.005;
+    if (foreRef.current) foreRef.current.rotation.y += delta * 0.012;
   });
 
   return (
-    <points ref={pointsRef} frustumCulled={false}>
-      <bufferGeometry>
-        <bufferAttribute
-          attach="attributes-position"
-          count={positions.length / 3}
-          array={positions}
-          itemSize={3}
-        />
-        <bufferAttribute
-          attach="attributes-aColor"
-          count={colors.length / 3}
-          array={colors}
-          itemSize={3}
-        />
-        <bufferAttribute
-          attach="attributes-aSize"
-          count={sizes.length}
-          array={sizes}
-          itemSize={1}
-        />
-        <bufferAttribute
-          attach="attributes-aPhase"
-          count={phases.length}
-          array={phases}
-          itemSize={1}
-        />
-      </bufferGeometry>
-      <shaderMaterial
-        ref={materialRef}
-        args={[DeepSpaceShaderMaterial]}
-        transparent
-        depthWrite={false}
-        blending={THREE.AdditiveBlending}
-      />
-    </points>
+    <group>
+      {/* Tier 1: Far Starfield */}
+      <points ref={farRef} frustumCulled={false}>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" count={farData.positions.length / 3} array={farData.positions} itemSize={3} />
+          <bufferAttribute attach="attributes-aColor" count={farData.colors.length / 3} array={farData.colors} itemSize={3} />
+          <bufferAttribute attach="attributes-aSize" count={farData.sizes.length} array={farData.sizes} itemSize={1} />
+          <bufferAttribute attach="attributes-aPhase" count={farData.phases.length} array={farData.phases} itemSize={1} />
+        </bufferGeometry>
+        <shaderMaterial ref={materialRef} args={[DeepSpaceShaderMaterial]} transparent depthWrite={false} blending={THREE.AdditiveBlending} />
+      </points>
+
+      {/* Tier 2: Mid-Ground Starfield */}
+      <points ref={midRef} frustumCulled={false}>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" count={midData.positions.length / 3} array={midData.positions} itemSize={3} />
+          <bufferAttribute attach="attributes-aColor" count={midData.colors.length / 3} array={midData.colors} itemSize={3} />
+          <bufferAttribute attach="attributes-aSize" count={midData.sizes.length} array={midData.sizes} itemSize={1} />
+          <bufferAttribute attach="attributes-aPhase" count={midData.phases.length} array={midData.phases} itemSize={1} />
+        </bufferGeometry>
+        <shaderMaterial args={[DeepSpaceShaderMaterial]} transparent depthWrite={false} blending={THREE.AdditiveBlending} />
+      </points>
+
+      {/* Tier 3: Foreground Starfield */}
+      <points ref={foreRef} frustumCulled={false}>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" count={foreData.positions.length / 3} array={foreData.positions} itemSize={3} />
+          <bufferAttribute attach="attributes-aColor" count={foreData.colors.length / 3} array={foreData.colors} itemSize={3} />
+          <bufferAttribute attach="attributes-aSize" count={foreData.sizes.length} array={foreData.sizes} itemSize={1} />
+          <bufferAttribute attach="attributes-aPhase" count={foreData.phases.length} array={foreData.phases} itemSize={1} />
+        </bufferGeometry>
+        <shaderMaterial args={[DeepSpaceShaderMaterial]} transparent depthWrite={false} blending={THREE.AdditiveBlending} />
+      </points>
+    </group>
   );
 }
 
@@ -871,7 +855,7 @@ export default function SceneCanvas() {
         <pointLight position={[15, 15, 15]} intensity={2.0} color="#00f0ff" />
         <pointLight position={[-15, -15, -15]} intensity={1.5} color="#00ff9d" />
         
-        {/* Deep Space Background Distant Starfield Layer */}
+        {/* 3-Tier Deep Space Parallax Starfield Layer (Far, Mid, Foreground) */}
         <DeepSpaceStarfield />
 
         <KnowledgeGraphEdges />
