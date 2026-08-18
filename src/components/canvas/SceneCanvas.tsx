@@ -845,9 +845,9 @@ function CameraRig({ controlsRef }: { controlsRef: React.RefObject<OrbitControls
           isAnimating.current = false;
         }
       } else {
-        // Zoom out to homepage full graph overview
+        // Zoom out to homepage full graph overview centered in screen
         const targetPos = new THREE.Vector3(0, 0, 0);
-        const camTargetPos = new THREE.Vector3(0, 0, 36.0 / Math.max(0.4, zoomLevel));
+        const camTargetPos = new THREE.Vector3(0, 0, 52.0 / Math.max(0.3, zoomLevel));
 
         controls.target.lerp(targetPos, delta * 5.0);
         camera.position.lerp(camTargetPos, delta * 5.0);
@@ -901,7 +901,7 @@ export default function SceneCanvas() {
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
         onPointerMissed={() => setSelectedTopicId(null)}
       >
-        <PerspectiveCamera makeDefault position={[0, 0, 36.0]} fov={60} />
+        <PerspectiveCamera makeDefault position={[0, 0, 52.0]} fov={60} />
         <OrbitControls
           makeDefault
           ref={controlsRef}
