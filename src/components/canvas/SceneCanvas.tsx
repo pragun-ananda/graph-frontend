@@ -553,7 +553,7 @@ function SynapseParticleCloud() {
 
 const sharedSphereGeometry = new THREE.SphereGeometry(0.38, 16, 16);
 
-// Interactive Knowledge Node Component with Ambient Glow & Prominent Selection Flare
+// Interactive Knowledge Node Component with Dampened Ambient Glow
 const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
   const meshRef = useRef<THREE.Mesh>(null!);
   const ringRef = useRef<THREE.Mesh>(null!);
@@ -592,14 +592,14 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
     setSelectedTopicId(node.id);
   };
 
-  // Ambient Starlight Glint for all nodes, scaling up prominently when hovered or selected
-  const glintScale = isSelected ? 1.75 : isHovered ? 1.25 : 0.6;
-  const glintOpacity = isSelected ? 1.0 : isHovered ? 0.85 : 0.45;
-  const emissiveVal = isSelected ? 2.8 : isHovered ? 1.8 : 1.1;
+  // Dampened Ambient Glow for idle nodes, remaining highly prominent on hover & select
+  const glintScale = isSelected ? 1.6 : isHovered ? 1.1 : 0.38;
+  const glintOpacity = isSelected ? 0.95 : isHovered ? 0.75 : 0.22;
+  const emissiveVal = isSelected ? 2.4 : isHovered ? 1.4 : 0.55;
 
   return (
     <group position={node.coordinates}>
-      {/* 4-Point Starlight Flare (Soft ambient for all nodes, prominent on hover/select) */}
+      {/* 4-Point Starlight Flare (Dampened subtle ambient glow, prominent on select/hover) */}
       <AnamorphicStarGlint
         color={nodeColor}
         scale={glintScale}
@@ -625,7 +625,7 @@ const KnowledgeNode = React.memo(({ node }: { node: TopicNode }) => {
           color={nodeColor}
           emissive={nodeColor}
           emissiveIntensity={emissiveVal}
-          roughness={0.15}
+          roughness={0.2}
           metalness={0.8}
           transparent={!isCategoryMatched || !isSearchMatched}
           opacity={!isCategoryMatched || !isSearchMatched ? 0.2 : 1.0}
