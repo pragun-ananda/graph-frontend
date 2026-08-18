@@ -6,7 +6,6 @@ import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { useStore } from '../../store/useStore';
 import { TopicNode } from '../../types/telemetry';
 import PostProcessing from './PostProcessing';
-import VolumetricNebulaClouds from './VolumetricNebulaClouds';
 
 // Overarching base HSL hues per domain subgraph
 const DOMAIN_HUES: Record<string, number> = {
@@ -985,9 +984,6 @@ export default function SceneCanvas() {
         
         {/* 3-Tier Deep Space Parallax Starfield Layer (Far, Mid, Foreground) */}
         <DeepSpaceStarfield />
-
-        {/* Volumetric Cosmic Nebula Clouds per Subgraph Domain Cluster */}
-        <VolumetricNebulaClouds />
 
         <KnowledgeGraphEdges />
 
