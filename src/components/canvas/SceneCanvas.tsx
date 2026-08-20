@@ -7,20 +7,20 @@ import { useStore } from '../../store/useStore';
 import { TopicNode } from '../../types/telemetry';
 import PostProcessing from './PostProcessing';
 
-// Overarching base HSL hues per domain subgraph
+// Overarching base HSL hues per domain subgraph (Palette 3: High-Tech Cyberdeck & Tactical HUD)
 const DOMAIN_HUES: Record<string, number> = {
-  'AI & ML': 0.52,       // ~187° Electric Cyan
-  'CS': 0.91,            // ~328° Hot Pink / Magenta
-  'SYSTEMS': 0.75,       // ~270° Cosmic Purple / Violet
-  'MATH': 0.14,          // ~50° Solar Electric Yellow / Gold
-  'PHYSICS': 0.43,       // ~155° Matrix Emerald Green
-  'CYBERSECURITY': 0.96, // ~345° Vivid Coral Crimson
-  'ARCH': 0.60           // ~216° Deep Electric Blue
+  'AI & ML': 0.50,       // Laser Cyan (#00FFFF)
+  'CS': 0.916,           // Neon Hot Pink (#FF007F)
+  'SYSTEMS': 0.75,       // Synapse Purple (#7928CA)
+  'MATH': 0.138,         // Overclock Yellow (#FFD600)
+  'PHYSICS': 0.40,       // Tritium Green (#00FF66)
+  'CYBERSECURITY': 0.966,// Hazard Plasma Red (#FF0033)
+  'ARCH': 0.597          // Ion Engine Blue (#0066FF)
 };
 
 // Deterministically derive different shades/tints of the subgraph's overarching color
 const getCategoryShade = (id: string, category: string): string => {
-  const baseHue = DOMAIN_HUES[category] ?? 0.52;
+  const baseHue = DOMAIN_HUES[category] ?? 0.50;
 
   let hash = 0;
   for (let i = 0; i < id.length; i++) {
@@ -29,9 +29,9 @@ const getCategoryShade = (id: string, category: string): string => {
   }
   const positiveHash = Math.abs(hash);
 
-  // Vary Saturation (78% to 100%) and Lightness (45% to 68%) for rich shades
-  const sat = 0.78 + ((positiveHash % 100) / 100) * 0.22;
-  const light = 0.45 + (((positiveHash >> 3) % 100) / 100) * 0.23;
+  // High-Tech Cyberdeck & Tactical HUD: High saturation, laser-bright luminosity
+  const sat = 0.88 + ((positiveHash % 100) / 100) * 0.12;
+  const light = 0.48 + (((positiveHash >> 3) % 100) / 100) * 0.16;
 
   const color = new THREE.Color();
   color.setHSL(baseHue, sat, light);
@@ -847,15 +847,26 @@ function KnowledgeGraphEdges() {
   );
 }
 
-// Camera Rig: Deep Space Hyper-Drive Fly-In Swoop (z = 175.0 -> 34.0) and cinematic node zoom
+// Camera Rig: Deep Space Hyper-Drive Fly-In Swoop (z = 450.0 -> 22.0) and cinematic node zoom
 function CameraRig({ controlsRef, introRef }: { controlsRef: React.RefObject<OrbitControlsImpl>; introRef: React.MutableRefObject<number> }) {
   const { camera } = useThree();
   const topicNodes = useStore((state) => state.topicNodes);
   const selectedTopicId = useStore((state) => state.selectedTopicId);
-  const zoomLevel = useStore((state) => state.zoomLevel);
 
   const prevSelectedId = useRef<string | null>(null);
   const isAnimating = useRef<boolean>(false);
+
+  useEffect(() => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+    const onInteractionStart = () => {
+      isAnimating.current = false;
+    };
+    controls.addEventListener('start', onInteractionStart);
+    return () => {
+      controls.removeEventListener('start', onInteractionStart);
+    };
+  }, [controlsRef]);
 
   useEffect(() => {
     if (selectedTopicId !== prevSelectedId.current) {
@@ -868,12 +879,12 @@ function CameraRig({ controlsRef, introRef }: { controlsRef: React.RefObject<Orb
     const controls = controlsRef.current;
     if (!controls) return;
 
-    // 1. Deep Space Hyper-Drive Swoop Sequence on page load/refresh (Starts at z = 450.0, lands at z = 22.0 so graph fills center of page)
+    // 1. Deep Space Hyper-Drive Swoop Sequence on page load/refresh (Starts at z = 450.0, lands at z = 48.0 so full graph is framed in screen)
     if (introRef.current < 1.0) {
       const t = Math.min(1.0, introRef.current);
       const easedT = 1 - Math.pow(1 - t, 4); // Quartic Ease Out for hyper-drive deceleration
 
-      const targetZ = selectedTopicId ? 22.0 : 22.0 / Math.max(0.3, zoomLevel);
+      const targetZ = 48.0;
       const startZ = 450.0;
       const currentZ = THREE.MathUtils.lerp(startZ, targetZ, easedT);
 
@@ -905,7 +916,7 @@ function CameraRig({ controlsRef, introRef }: { controlsRef: React.RefObject<Orb
       } else {
         // Zoom out to homepage full graph overview centered in screen
         const targetPos = new THREE.Vector3(0, 0, 0);
-        const camTargetPos = new THREE.Vector3(0, 0, 22.0 / Math.max(0.3, zoomLevel));
+        const camTargetPos = new THREE.Vector3(0, 0, 48.0);
 
         controls.target.lerp(targetPos, delta * 4.5);
         camera.position.lerp(camTargetPos, delta * 4.5);
@@ -924,36 +935,12 @@ function CameraRig({ controlsRef, introRef }: { controlsRef: React.RefObject<Orb
 export default function SceneCanvas() {
   const topicNodes = useStore((state) => state.topicNodes);
   const setSelectedTopicId = useStore((state) => state.setSelectedTopicId);
-  const zoomIn = useStore((state) => state.zoomIn);
-  const zoomOut = useStore((state) => state.zoomOut);
   const controlsRef = useRef<OrbitControlsImpl>(null!);
-
   const introRef = useRef(0);
 
   useEffect(() => {
     introRef.current = 0;
   }, []);
-
-  useEffect(() => {
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      if (e.deltaY < 0) {
-        zoomIn();
-      } else {
-        zoomOut();
-      }
-    };
-
-    const container = document.getElementById('canvas-viewport');
-    if (container) {
-      container.addEventListener('wheel', handleWheel, { passive: false });
-    }
-    return () => {
-      if (container) {
-        container.removeEventListener('wheel', handleWheel);
-      }
-    };
-  }, [zoomIn, zoomOut]);
 
   return (
     <div
@@ -970,10 +957,12 @@ export default function SceneCanvas() {
           makeDefault
           ref={controlsRef}
           enableDamping
-          dampingFactor={0.08}
-          rotateSpeed={1.0}
-          panSpeed={1.2}
-          zoomSpeed={0.9}
+          dampingFactor={0.06}
+          rotateSpeed={0.8}
+          panSpeed={1.0}
+          zoomSpeed={0.5}
+          minDistance={3.0}
+          maxDistance={120.0}
           screenSpacePanning
         />
         <IntroAnimationController introRef={introRef} />

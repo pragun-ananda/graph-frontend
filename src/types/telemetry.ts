@@ -9,6 +9,15 @@ export interface MousePosition {
   normalizedY: number;
 }
 
+export interface NoteItem {
+  id: string;
+  title: string;
+  filename?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  content?: string;
+}
+
 export interface TopicNode {
   id: string;
   name: string;
@@ -20,6 +29,7 @@ export interface TopicNode {
   prerequisites: string[]; // Node IDs required BEFORE learning this topic (A -> X)
   unlocks: string[]; // Node IDs unlocked AFTER learning this topic (X -> B)
   summary: string;
+  notes?: NoteItem[];
 }
 
 export interface StudyTodo {
@@ -84,6 +94,8 @@ export interface TelemetryState {
   selectedTopicId: string | null;
   hoveredTopicId: string | null;
   isInspectorOpen: boolean;
+  activeNote: NoteItem | null;
+  isNoteEditing: boolean;
   todos: StudyTodo[];
   pomodoro: PomodoroState;
 
@@ -120,6 +132,11 @@ export interface TelemetryActions {
   // Knowledge Graph Actions
   setSelectedTopicId: (id: string | null) => void;
   setIsInspectorOpen: (open: boolean) => void;
+  setActiveNote: (note: NoteItem | null, isEditing?: boolean) => void;
+  setIsNoteEditing: (isEditing: boolean) => void;
+  addNoteToTopic: (topicId: string, note: Omit<NoteItem, 'id'>) => void;
+  updateNoteInTopic: (topicId: string, note: NoteItem) => void;
+  deleteNoteFromTopic: (topicId: string, noteId: string) => void;
   addTopicNode: (node: Omit<TopicNode, 'id'>) => void;
   updateTopicMastery: (id: string, mastery: number) => void;
 

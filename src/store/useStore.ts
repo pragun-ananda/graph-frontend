@@ -5,6 +5,7 @@ import {
   SystemStatus,
   StudyMode,
   TopicNode,
+  NoteItem,
   StudyTodo,
   PomodoroState,
   AudioFrequencyData,
@@ -17,7 +18,82 @@ interface RawTopic {
   summary: string;
   prereqNames?: string[]; // Topics required BEFORE this topic (A -> X)
   unlockNames?: string[]; // Topics UNLOCKED by this topic (X -> B)
+  notes?: NoteItem[];
 }
+
+const BACKPROP_NOTE_CONTENT = `# Neural Network Backpropagation
+
+Backpropagation (short for *backward propagation of errors*) is the fundamental supervised learning algorithm for artificial neural networks. Given an error function, it calculates the analytical gradient of the loss with respect to all tunable parameters (weights and biases) across the computation graph.
+
+---
+
+## 1. Mathematical Formulation & Chain Rule
+For an $L$-layer network, the forward propagation for layer $l$ is defined as:
+
+$$ Z^{[l]} = W^{[l]} A^{[l-1]} + b^{[l]} $$
+$$ A^{[l]} = g(Z^{[l]}) $$
+
+Where $g(\\cdot)$ is the non-linear activation function (such as ReLU, GELU, or Sigmoid).
+
+Applying the **multivariate chain rule**, the error term $\\delta^{[l]}$ (or $dZ^{[l]}$) is computed backwards:
+
+$$ \\delta^{[L]} = \\nabla_A \\mathcal{L} \\odot g'(Z^{[L]}) $$
+$$ \\delta^{[l]} = ((W^{[l+1]})^T \\delta^{[l+1]}) \\odot g'(Z^{[l]}) $$
+
+---
+
+## 2. Gradient Calculation Matrix
+
+| Variable | Forward Pass Formula | Gradient Formula (Loss Derivative) |
+| :--- | :--- | :--- |
+| **Linear Combination ($Z$)** | $Z^{[l]} = W^{[l]} A^{[l-1]} + b^{[l]}$ | $dZ^{[l]} = dA^{[l]} \\odot g'(Z^{[l]})$ |
+| **Weight Matrix ($W$)** | Parameter matrix | $dW^{[l]} = \\frac{1}{m} dZ^{[l]} (A^{[l-1]})^T$ |
+| **Bias Vector ($b$)** | Parameter vector | $db^{[l]} = \\frac{1}{m} \\sum_{i=1}^{m} dZ^{[l](i)}$ |
+| **Activation Output ($A$)** | $A^{[l]} = g(Z^{[l]})$ | $dA^{[l-1]} = (W^{[l]})^T dZ^{[l]}$ |
+
+---
+
+## 3. Minimal Python / NumPy Vectorized Implementation
+
+\`\`\`python
+import numpy as np
+
+def backward_propagation(dAL, caches):
+    """
+    Computes loss gradients across all network layers.
+    dAL: post-activation gradient for output layer
+    caches: list of caches containing (A_prev, W, b, Z)
+    """
+    grads = {}
+    L = len(caches)
+    m = dAL.shape[1]
+    
+    # Output layer gradient
+    current_cache = caches[L - 1]
+    grads[f"dA{L-1}"], grads[f"dW{L}"], grads[f"db{L}"] = linear_activation_backward(
+        dAL, current_cache, activation="sigmoid"
+    )
+    
+    # Loop backwards through hidden layers
+    for l in reversed(range(L - 1)):
+        current_cache = caches[l]
+        dA_prev_temp, dW_temp, db_temp = linear_activation_backward(
+            grads[f"dA{l+1}"], current_cache, activation="relu"
+        )
+        grads[f"dA{l}"] = dA_prev_temp
+        grads[f"dW{l+1}"] = dW_temp
+        grads[f"db{l+1}"] = db_temp
+        
+    return grads
+\`\`\`
+
+---
+
+## 4. Key Bottlenecks & Optimization Techniques
+- **Vanishing Gradients**: When using sigmoids/tanh, gradients saturate near zero for large $|z|$. Solution: ReLU, GELU, residual skip connections (ResNets).
+- **Exploding Gradients**: Large weights lead to exponentially growing gradients. Solution: Gradient norm clipping, proper initialization (He / Xavier), LayerNorm.
+- **Memory Overhead**: Activations $A^{[l]}$ must be retained in VRAM during forward pass for backward derivation. Solution: Activation checkpointing (rematerialization).
+`;
 
 const DOMAIN_DATA: { category: TopicNode['category']; topics: RawTopic[] }[] = [
   {
@@ -26,7 +102,16 @@ const DOMAIN_DATA: { category: TopicNode['category']; topics: RawTopic[] }[] = [
       {
         name: 'Neural Network Backpropagation',
         summary: 'Reverse-mode automatic differentiation, chain rule, loss gradients, and Adam optimizer.',
-        unlockNames: ['Convolutional Neural Networks (CNNs)', 'Transformer Self-Attention', 'Recurrent Neural Networks & LSTM', 'Autoencoders & Latent Compression', 'Softmax Temperature Scaling']
+        unlockNames: ['Convolutional Neural Networks (CNNs)', 'Transformer Self-Attention', 'Recurrent Neural Networks & LSTM', 'Autoencoders & Latent Compression', 'Softmax Temperature Scaling'],
+        notes: [
+          {
+            id: 'NOTE-001',
+            title: 'Backpropagation Derivation Notes',
+            createdAt: 'Aug 17, 2026',
+            updatedAt: '2 hours ago',
+            content: BACKPROP_NOTE_CONTENT
+          }
+        ]
       },
       {
         name: 'Transformer Self-Attention',
@@ -221,7 +306,33 @@ const DOMAIN_DATA: { category: TopicNode['category']; topics: RawTopic[] }[] = [
       {
         name: 'Binary Search & Binary Search Trees',
         summary: 'Logarithmic search space partitioning and ordered tree structures.',
-        unlockNames: ['Red-Black Trees', 'AVL Trees', 'B-Trees & B+ Trees', 'Splay Trees', 'Skip Lists']
+        unlockNames: ['Red-Black Trees', 'AVL Trees', 'B-Trees & B+ Trees', 'Splay Trees', 'Skip Lists'],
+        notes: [
+          {
+            id: 'NOTE-002',
+            title: 'BST Invariants & Traversal',
+            createdAt: 'Aug 14, 2026',
+            updatedAt: '1 day ago',
+            content: `# Binary Search Trees (BST)
+
+A Binary Search Tree is a rooted binary tree data structure where each internal node stores a key greater than all keys in its left subtree and less than all keys in its right subtree.
+
+---
+
+## 1. Asymptotic Complexity
+| Operation | Average Case | Worst Case (Degenerate) |
+| :--- | :--- | :--- |
+| **Search** | $\\mathcal{O}(\\log N)$ | $\\mathcal{O}(N)$ |
+| **Insertion** | $\\mathcal{O}(\\log N)$ | $\\mathcal{O}(N)$ |
+| **Deletion** | $\\mathcal{O}(\\log N)$ | $\\mathcal{O}(N)$ |
+
+---
+
+## 2. In-Order Traversal Invariant
+Performing an in-order traversal (Left $\\to$ Node $\\to$ Right) visits keys in strictly sorted ascending order.
+`
+          }
+        ]
       },
       {
         name: 'B-Trees & B+ Trees',
@@ -402,7 +513,33 @@ const DOMAIN_DATA: { category: TopicNode['category']; topics: RawTopic[] }[] = [
       {
         name: 'Distributed Consensus (Raft)',
         summary: 'Leader election, log replication, heartbeat timers, and state machine safety.',
-        unlockNames: ['Paxos Protocol', 'Byzantine Fault Tolerance (PBFT)', 'Two-Phase Commit (2PC)', 'Chubby Lock Service']
+        unlockNames: ['Paxos Protocol', 'Byzantine Fault Tolerance (PBFT)', 'Two-Phase Commit (2PC)', 'Chubby Lock Service'],
+        notes: [
+          {
+            id: 'NOTE-003',
+            title: 'Raft Consensus & Leader Election',
+            createdAt: 'Aug 18, 2026',
+            updatedAt: '3 hours ago',
+            content: `# Raft Distributed Consensus
+
+Raft decomposes consensus into explicit sub-problems: **Leader Election**, **Log Replication**, and **Safety**.
+
+---
+
+## 1. Node States & Transitions
+- **Follower**: Responds to incoming RPCs from leaders and candidates.
+- **Candidate**: Increments term, votes for self, and sends \`RequestVote\` RPCs.
+- **Leader**: Manages replicated log entries and broadcasts periodic heartbeats.
+
+---
+
+## 2. Key Invariants
+1. **Election Safety**: At most one leader can be elected in a given term.
+2. **Leader Append-Only**: A leader never overwrites or truncates its own log entries.
+3. **Log Matching Property**: If two logs contain an entry with the same index and term, then the logs are identical in all entries up through the given index.
+`
+          }
+        ]
       },
       {
         name: 'Paxos Protocol',
@@ -575,7 +712,35 @@ const DOMAIN_DATA: { category: TopicNode['category']; topics: RawTopic[] }[] = [
         name: 'Singular Value Decomposition (SVD)',
         summary: 'Matrix factorization into singular vectors and singular value diagonal scaling.',
         prereqNames: ['Eigenvalues & Eigenvectors'],
-        unlockNames: ['Principal Component Analysis (PCA)', 'Tensor Calculus & Differential Forms']
+        unlockNames: ['Principal Component Analysis (PCA)', 'Tensor Calculus & Differential Forms'],
+        notes: [
+          {
+            id: 'NOTE-004',
+            title: 'SVD Matrix Factorization',
+            createdAt: 'Aug 16, 2026',
+            updatedAt: '4 hours ago',
+            content: `# Singular Value Decomposition (SVD)
+
+Singular Value Decomposition (SVD) is a fundamental theorem in linear algebra stating that any $m \\times n$ real matrix $A$ can be factorized into three matrices:
+
+$$ A = U \\Sigma V^T $$
+
+---
+
+## 1. Matrix Properties
+- $U$ is an $m \\times m$ orthogonal matrix (Left singular vectors, eigenvectors of $AA^T$).
+- $\\Sigma$ is an $m \\times n$ rectangular diagonal matrix containing non-negative singular values $\\sigma_1 \\ge \\sigma_2 \\ge \\dots \\ge 0$.
+- $V^T$ is the transpose of an $n \\times n$ orthogonal matrix $V$ (Right singular vectors, eigenvectors of $A^T A$).
+
+---
+
+## 2. Low-Rank Matrix Approximation (Eckart-Young-Mirsky Theorem)
+The optimal rank-$k$ approximation $\\hat{A}_k$ in Frobenius and spectral norms is obtained by truncating to the top $k$ singular values:
+
+$$ \\hat{A}_k = \\sum_{i=1}^{k} \\sigma_i u_i v_i^T $$
+`
+          }
+        ]
       },
       {
         name: 'Eigenvalues & Eigenvectors',
@@ -1110,7 +1275,8 @@ function generateCosmosNodes(): TopicNode[] {
         coordinates: [Number(x.toFixed(2)), Number(y.toFixed(2)), Number(z.toFixed(2))],
         prerequisites: [],
         unlocks: [],
-        summary: topic.summary
+        summary: topic.summary,
+        notes: topic.notes || []
       });
     });
   });
@@ -1309,6 +1475,8 @@ const INITIAL_STATE: TelemetryState = {
   selectedTopicId: null,
   hoveredTopicId: null,
   isInspectorOpen: false,
+  activeNote: null,
+  isNoteEditing: false,
   todos: INITIAL_TODOS,
   pomodoro: INITIAL_POMODORO,
 
@@ -1348,11 +1516,56 @@ export const useStore = create<TelemetryStore>((set) => ({
 
   // Knowledge Graph Actions
   setIsInspectorOpen: (isInspectorOpen: boolean) => set({ isInspectorOpen }),
-  setSelectedTopicId: (selectedTopicId: string | null) =>
+  setActiveNote: (activeNote: NoteItem | null, isNoteEditing = false) =>
+    set({ activeNote, isNoteEditing }),
+  setIsNoteEditing: (isNoteEditing: boolean) => set({ isNoteEditing }),
+  addNoteToTopic: (topicId: string, note: Omit<NoteItem, 'id'>) =>
     set((state) => {
-      const nextZoom = selectedTopicId ? Math.max(1.8, state.zoomLevel) : state.zoomLevel;
-      return { selectedTopicId, isInspectorOpen: false, zoomLevel: nextZoom };
+      const newId = `NOTE-${Date.now().toString().slice(-4)}`;
+      const today = new Date().toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+      const newNote: NoteItem = {
+        ...note,
+        id: newId,
+        createdAt: note.createdAt || today,
+        updatedAt: note.updatedAt || 'Just now'
+      };
+      const updated = state.topicNodes.map((n) => {
+        if (n.id === topicId) {
+          return { ...n, notes: [...(n.notes || []), newNote] };
+        }
+        return n;
+      });
+      return { topicNodes: updated, activeNote: newNote, isNoteEditing: false };
     }),
+  updateNoteInTopic: (topicId: string, updatedNote: NoteItem) =>
+    set((state) => {
+      const updated = state.topicNodes.map((n) => {
+        if (n.id === topicId) {
+          const nextNotes = (n.notes || []).map((note) =>
+            note.id === updatedNote.id ? updatedNote : note
+          );
+          return { ...n, notes: nextNotes };
+        }
+        return n;
+      });
+      return { topicNodes: updated, activeNote: updatedNote, isNoteEditing: false };
+    }),
+  deleteNoteFromTopic: (topicId: string, noteId: string) =>
+    set((state) => {
+      const updated = state.topicNodes.map((n) => {
+        if (n.id === topicId) {
+          return { ...n, notes: (n.notes || []).filter((note) => note.id !== noteId) };
+        }
+        return n;
+      });
+      const nextActive = state.activeNote?.id === noteId ? null : state.activeNote;
+      return { topicNodes: updated, activeNote: nextActive };
+    }),
+  setSelectedTopicId: (selectedTopicId: string | null) => set({ selectedTopicId }),
   addTopicNode: (node: Omit<TopicNode, 'id'>) =>
     set((state) => {
       const newId = `TOPIC-${(state.topicNodes.length + 1).toString().padStart(3, '0')}`;

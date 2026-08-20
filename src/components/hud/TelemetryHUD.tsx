@@ -22,24 +22,26 @@ import {
   ArrowRight,
   ShieldAlert,
   Zap,
-  X
+  X,
+  FileText
 } from 'lucide-react';
+import NoteViewerModal from './NoteViewerModal';
 import { useStore } from '../../store/useStore';
 import { TopicNode } from '../../types/telemetry';
 import * as THREE from 'three';
 
 const DOMAIN_HUES: Record<string, number> = {
-  'AI & ML': 0.52,       // ~187° Electric Cyan
-  'CS': 0.91,            // ~328° Hot Pink / Magenta
-  'SYSTEMS': 0.75,       // ~270° Cosmic Purple / Violet
-  'MATH': 0.14,          // ~50° Solar Electric Yellow / Gold
-  'PHYSICS': 0.43,       // ~155° Matrix Emerald Green
-  'CYBERSECURITY': 0.96, // ~345° Vivid Coral Crimson
-  'ARCH': 0.60           // ~216° Deep Electric Blue
+  'AI & ML': 0.50,       // Laser Cyan (#00FFFF)
+  'CS': 0.916,           // Neon Hot Pink (#FF007F)
+  'SYSTEMS': 0.75,       // Synapse Purple (#7928CA)
+  'MATH': 0.138,         // Overclock Yellow (#FFD600)
+  'PHYSICS': 0.40,       // Tritium Green (#00FF66)
+  'CYBERSECURITY': 0.966,// Hazard Plasma Red (#FF0033)
+  'ARCH': 0.597          // Ion Engine Blue (#0066FF)
 };
 
 const getCategoryShade = (id: string, category: string): string => {
-  const baseHue = DOMAIN_HUES[category] ?? 0.52;
+  const baseHue = DOMAIN_HUES[category] ?? 0.50;
 
   let hash = 0;
   for (let i = 0; i < id.length; i++) {
@@ -48,8 +50,9 @@ const getCategoryShade = (id: string, category: string): string => {
   }
   const positiveHash = Math.abs(hash);
 
-  const sat = 0.78 + ((positiveHash % 100) / 100) * 0.22;
-  const light = 0.45 + (((positiveHash >> 3) % 100) / 100) * 0.23;
+  // High-Tech Cyberdeck & Tactical HUD: High saturation, laser-bright luminosity
+  const sat = 0.88 + ((positiveHash % 100) / 100) * 0.12;
+  const light = 0.48 + (((positiveHash >> 3) % 100) / 100) * 0.16;
 
   const color = new THREE.Color();
   color.setHSL(baseHue, sat, light);
@@ -645,7 +648,83 @@ export default function TelemetryHUD() {
                   </div>
                 </div>
 
-                {/* 2. LEARN NEXT SECTION */}
+                {/* 2. NOTES SECTION */}
+                <div className="pt-2.5 border-t border-white/10 space-y-2">
+                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-200">
+                    <div className="flex items-center gap-1.5" style={{ color: selectedNodeColor }}>
+                      <FileText size={13} />
+                      <span>NOTES</span>
+                    </div>
+                    {selectedNode.notes && selectedNode.notes.length > 0 && (
+                      <span
+                        className="text-[10px] font-bold"
+                        style={{ color: selectedNodeColor }}
+                      >
+                        {selectedNode.notes.length} FILE{selectedNode.notes.length > 1 ? 'S' : ''}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    {selectedNode.notes && selectedNode.notes.length > 0 ? (
+                      selectedNode.notes.map((note) => (
+                        <div
+                          key={note.id}
+                          onClick={() => store.setActiveNote(note)}
+                          style={{
+                            borderColor: `${selectedNodeColor}40`
+                          }}
+                          className="p-2 rounded bg-slate-950/80 hover:bg-slate-900 border text-slate-200 text-[11px] cursor-pointer transition-all flex items-center justify-between group shadow-sm"
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <FileText
+                              size={13}
+                              className="flex-shrink-0 group-hover:scale-110 transition-transform"
+                              style={{ color: selectedNodeColor }}
+                            />
+                            <span className="truncate font-semibold text-slate-200 group-hover:text-white">
+                              {note.title}
+                            </span>
+                          </div>
+                          {note.updatedAt && (
+                            <span className="text-[10px] text-slate-400 font-mono ml-2 flex-shrink-0">
+                              {note.updatedAt}
+                            </span>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-[10px] text-slate-500 italic p-1">
+                        No notes attached to this topic.
+                      </div>
+                    )}
+
+                    {/* Add New Note Button */}
+                    <button
+                      onClick={() => {
+                        store.setActiveNote(
+                          {
+                            id: '',
+                            title: 'Untitled Note',
+                            content: '',
+                            updatedAt: 'Just now'
+                          },
+                          true
+                        );
+                      }}
+                      style={{
+                        borderColor: `${selectedNodeColor}35`,
+                        color: selectedNodeColor
+                      }}
+                      className="w-full mt-1 p-2 rounded-lg border border-dashed hover:border-solid hover:bg-slate-900/80 text-[11px] font-mono font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm group"
+                    >
+                      <Plus size={13} className="group-hover:scale-125 transition-transform" />
+                      <span>+ ADD NOTE</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 3. LEARN NEXT SECTION */}
                 <div className="pt-2.5 border-t border-white/10 space-y-2">
                   <div className="flex items-center gap-1.5 text-[#00ff9d] text-[11px] font-bold">
                     <Zap size={13} />
@@ -712,6 +791,9 @@ export default function TelemetryHUD() {
           </span>
         </div>
       </footer>
+
+      {/* Markdown Note Viewing Modal */}
+      <NoteViewerModal />
     </div>
   );
 }
