@@ -28,36 +28,7 @@ import {
 import NoteViewerModal from './NoteViewerModal';
 import { useStore } from '../../store/useStore';
 import { TopicNode } from '../../types/telemetry';
-import * as THREE from 'three';
-
-const DOMAIN_HUES: Record<string, number> = {
-  'AI & ML': 0.50,       // Laser Cyan (#00FFFF)
-  'CS': 0.916,           // Neon Hot Pink (#FF007F)
-  'SYSTEMS': 0.75,       // Synapse Purple (#7928CA)
-  'MATH': 0.138,         // Overclock Yellow (#FFD600)
-  'PHYSICS': 0.40,       // Tritium Green (#00FF66)
-  'CYBERSECURITY': 0.966,// Hazard Plasma Red (#FF0033)
-  'ARCH': 0.597          // Ion Engine Blue (#0066FF)
-};
-
-const getCategoryShade = (id: string, category: string): string => {
-  const baseHue = DOMAIN_HUES[category] ?? 0.50;
-
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) {
-    hash = (hash << 5) - hash + id.charCodeAt(i);
-    hash |= 0;
-  }
-  const positiveHash = Math.abs(hash);
-
-  // High-Tech Cyberdeck & Tactical HUD: High saturation, laser-bright luminosity
-  const sat = 0.88 + ((positiveHash % 100) / 100) * 0.12;
-  const light = 0.48 + (((positiveHash >> 3) % 100) / 100) * 0.16;
-
-  const color = new THREE.Color();
-  color.setHSL(baseHue, sat, light);
-  return '#' + color.getHexString();
-};
+import { DOMAIN_BASE_COLORS, getCategoryShade } from '../../utils/theme';
 
 // Topological Sort of all ancestor prerequisite nodes leading up to targetId
 const getTopologicalPrerequisites = (targetId: string, topicNodes: TopicNode[]): TopicNode[] => {
@@ -239,13 +210,20 @@ export default function TelemetryHUD() {
                 </span>
                 {categories.map((cat) => {
                   const isSelected = (cat === 'ALL' && !store.selectedCategory) || store.selectedCategory === cat;
+                  const catColor = cat === 'ALL' ? '#00f0ff' : DOMAIN_BASE_COLORS[cat] || '#00f0ff';
                   return (
                     <button
                       key={cat}
                       onClick={() => store.setSelectedCategory(cat === 'ALL' ? null : cat)}
-                      className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all border whitespace-nowrap flex-shrink-0 ${
+                      style={{
+                        backgroundColor: isSelected ? `${catColor}25` : undefined,
+                        borderColor: isSelected ? catColor : undefined,
+                        color: isSelected ? catColor : undefined,
+                        boxShadow: isSelected ? `0 0 12px ${catColor}60` : undefined
+                      }}
+                      className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all border whitespace-nowrap flex-shrink-0 cursor-pointer ${
                         isSelected
-                          ? 'bg-[#00f0ff]/20 text-[#00f0ff] border-[#00f0ff] shadow-[0_0_10px_rgba(0,240,255,0.3)]'
+                          ? ''
                           : 'bg-slate-950/60 text-slate-400 border-white/10 hover:text-slate-200 hover:border-white/25'
                       }`}
                     >
@@ -597,7 +575,7 @@ export default function TelemetryHUD() {
                 <div className="grid grid-cols-2 gap-2 text-[11px]">
                   <div className="bg-slate-950/60 p-2.5 rounded border border-white/5">
                     <span className="text-slate-400 block mb-0.5">CATEGORY</span>
-                    <span className="text-[#00f0ff] font-bold">{selectedNode.category}</span>
+                    <span className="font-bold" style={{ color: selectedNodeColor }}>{selectedNode.category}</span>
                   </div>
                   <div className="bg-slate-950/60 p-2.5 rounded border border-white/5">
                     <span className="text-slate-400 block mb-0.5">MASTERY</span>
@@ -770,7 +748,11 @@ export default function TelemetryHUD() {
               <div className="pt-2 flex-shrink-0">
                 <button
                   onClick={() => store.updateTopicMastery(selectedNode.id, selectedNode.mastery + 10)}
-                  className="w-full bg-[#00f0ff] text-slate-950 py-2 rounded font-bold text-center hover:bg-[#00f0ff]/80 transition-colors shadow-[0_0_10px_rgba(0,240,255,0.3)]"
+                  style={{
+                    backgroundColor: selectedNodeColor,
+                    boxShadow: `0 0 14px ${selectedNodeColor}60`
+                  }}
+                  className="w-full text-slate-950 py-2 rounded font-bold text-center hover:opacity-90 transition-opacity shadow-md cursor-pointer"
                 >
                   +10% MASTERY RECALL
                 </button>
