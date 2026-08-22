@@ -10,3 +10,7 @@
 node_modules/
 dist/
 *.log
+
+# Database Data Volumes
+postgres_data/
+**/postgres_data/
