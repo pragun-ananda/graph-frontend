@@ -1,80 +1,12 @@
-# OS Files
+# OS
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
 
 # Environment & Secrets
 .env
-.env.local
-.env.*.local
-*.pem
-*.key
+.env.*
+!.env.example
 
-# Frontend / Node
+# Node / Build Outputs
 node_modules/
 dist/
-dist-ssr/
-*.local
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# Rust / Cargo
-**/target/
-Cargo.lock.bak
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-.venv/
-env/
-venv/
-ENV/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Database & Local Storage Runtime Volumes
-/storage/data/
-/storage/postgres_data/
-/deployment/data/
-/deployment/postgres_data/
-*.sqlite
-*.sqlite3
-*.db
-
-# IDE & Editors
-.idea/
-.vscode/
-*.swp
-*.swo
-.project
-.classpath
-.c9/
-*.launch
-*.sublime-workspace
-.fleet/
-
-# Logs
-logs/
 *.log
