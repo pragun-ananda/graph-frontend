@@ -54,9 +54,11 @@ wheels/
 .installed.cfg
 *.egg
 
-# Database & Local Storage
-**/postgres_data/
-**/data/
+# Database & Local Storage Runtime Volumes
+/storage/data/
+/storage/postgres_data/
+/deployment/data/
+/deployment/postgres_data/
 *.sqlite
 *.sqlite3
 *.db
