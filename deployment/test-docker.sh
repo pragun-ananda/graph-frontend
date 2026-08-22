@@ -4,6 +4,19 @@ set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMPOSE_FILE="$DIR/docker-compose.yml"
 CONTAINER_NAME="study_app_postgres"
+# Load environment file if present (matching Compose's default lookup)
+if [ -f "$DIR/.env" ]; then
+    set -a
+    # shellcheck disable=SC1090
+    . "$DIR/.env"
+    set +a
+elif [ -f "$DIR/../.env" ]; then
+    set -a
+    # shellcheck disable=SC1090
+    . "$DIR/../.env"
+    set +a
+fi
+
 DB_NAME="${POSTGRES_DB:-test}"
 DB_USER="${POSTGRES_USER:-postgres}"
 
@@ -37,10 +50,17 @@ done
 echo "✅ Container is healthy!"
 
 echo "=== [3/4] Running SQL Connection & Query Verification ==="
+# Obtain resolved DB user and DB name directly from the container runtime
+CONTAINER_USER=$(docker exec "$CONTAINER_NAME" printenv POSTGRES_USER 2>/dev/null || true)
+CONTAINER_DB=$(docker exec "$CONTAINER_NAME" printenv POSTGRES_DB 2>/dev/null || true)
+
+DB_USER="${CONTAINER_USER:-${DB_USER}}"
+DB_NAME="${CONTAINER_DB:-${DB_NAME}}"
+
 RESULT=$(docker exec "$CONTAINER_NAME" psql -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT current_database();" | xargs)
 
 if [ "$RESULT" = "$DB_NAME" ]; then
-    echo "✅ Database connection successful! Current DB: '$RESULT'"
+    echo "✅ Database connection successful! Current DB: '$RESULT' (User: '$DB_USER')"
 else
     echo "❌ Unexpected database name: '$RESULT' (expected '$DB_NAME')"
     exit 1
